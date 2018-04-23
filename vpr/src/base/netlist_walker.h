@@ -25,7 +25,7 @@ class NetlistVisitor {
         virtual ~NetlistVisitor() = default;
         void start() { start_impl(); }
         void visit_top(const char* top_level_name) { visit_top_impl(top_level_name); }
-        void visit_clb(const t_pb* clb) { visit_clb_impl(clb); }
+        void visit_clb(ClusterBlockId blk_id, const t_pb* clb) { visit_clb_impl(blk_id, clb); }
         void visit_atom(const t_pb* atom) { visit_atom_impl(atom); }
         void finish() { finish_impl(); }
 
@@ -33,7 +33,7 @@ class NetlistVisitor {
         //All implementation methods are no-ops in this base class
         virtual void start_impl();
         virtual void visit_top_impl(const char* top_level_name);
-        virtual void visit_clb_impl(const t_pb* clb);
+        virtual void visit_clb_impl(ClusterBlockId blk_id, const t_pb* clb);
         virtual void visit_atom_impl(const t_pb* atom);
         virtual void finish_impl();
 };

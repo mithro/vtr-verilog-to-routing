@@ -11,7 +11,7 @@ void NetlistWalker::walk() {
 
     for(auto blk_id : cluster_ctx.clb_nlist.blocks()) {
         //Visit the top-level block
-		visitor_.visit_clb(cluster_ctx.clb_nlist.block_pb(blk_id));
+        visitor_.visit_clb(blk_id, cluster_ctx.clb_nlist.block_pb(blk_id));
 
         //Visit all the block's primitives
         walk_atoms(cluster_ctx.clb_nlist.block_pb(blk_id));
@@ -55,7 +55,7 @@ void NetlistVisitor::visit_top_impl(const char* /*top_level_name*/) {
     //noop
 }
 
-void NetlistVisitor::visit_clb_impl(const t_pb* /*clb*/) {
+void NetlistVisitor::visit_clb_impl(ClusterBlockId /*blk_id*/, const t_pb* /*clb*/) {
     //noop
 }
 
