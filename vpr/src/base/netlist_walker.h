@@ -27,6 +27,12 @@ class NetlistVisitor {
         void visit_top(const char* top_level_name) { visit_top_impl(top_level_name); }
         void visit_clb(ClusterBlockId blk_id, const t_pb* clb) { visit_clb_impl(blk_id, clb); }
         void visit_atom(const t_pb* atom) { visit_atom_impl(atom); }
+        void visit_all(const t_pb_route *top_pb_route, const t_pb* pb, const t_pb_graph_node* pb_graph_node) {
+                VTR_ASSERT(top_pb_route != nullptr);
+                VTR_ASSERT(pb == nullptr || pb_graph_node == pb->pb_graph_node);
+                VTR_ASSERT(pb_graph_node != nullptr);
+                visit_all_impl(top_pb_route, pb, pb_graph_node);
+        }
         void finish() { finish_impl(); }
 
     protected:
@@ -35,6 +41,7 @@ class NetlistVisitor {
         virtual void visit_top_impl(const char* top_level_name);
         virtual void visit_clb_impl(ClusterBlockId blk_id, const t_pb* clb);
         virtual void visit_atom_impl(const t_pb* atom);
+        virtual void visit_all_impl(const t_pb_route* top_pb_route, const t_pb* pb, const t_pb_graph_node* pb_graph_node);
         virtual void finish_impl();
 };
 #endif

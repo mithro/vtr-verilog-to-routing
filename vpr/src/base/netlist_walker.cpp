@@ -63,6 +63,10 @@ void NetlistVisitor::visit_atom_impl(const t_pb* /*atom*/) {
     //noop
 }
 
+void NetlistVisitor::visit_all_impl(const t_pb_route* /*top_pb_route*/, const t_pb* /* pb */, const t_pb_graph_node* /* pb_graph_node */) {
+    //noop
+}
+
 void NetlistVisitor::finish_impl() {
     //noop
 }
