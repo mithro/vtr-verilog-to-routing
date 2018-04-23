@@ -10,42 +10,44 @@ void NetlistWalker::walk() {
     visitor_.visit_top(atom_ctx.nlist.netlist_name().c_str());
 
     for(auto blk_id : cluster_ctx.clb_nlist.blocks()) {
-        //Visit the top-level block
-        visitor_.visit_clb(blk_id, cluster_ctx.clb_nlist.block_pb(blk_id));
-
-        //Visit all the block's primitives
-        walk_atoms(cluster_ctx.clb_nlist.block_pb(blk_id));
+        const auto pb = cluster_ctx.clb_nlist.block_pb(blk_id);
+        visitor_.visit_clb(blk_id, pb);
+        walk_blocks(cluster_ctx.clb_nlist.block_pb(blk_id)->pb_route, pb, pb->pb_graph_node);
     }
 
     visitor_.finish();
 }
 
-void NetlistWalker::walk_atoms(const t_pb* pb) {
-    //Recursively travers this pb calling visitor_.visit_atom()
-    //on any of its primitive pb's
+void NetlistWalker::walk_blocks(const t_pb_route *top_pb_route, const t_pb *pb, const t_pb_graph_node *pb_graph_node) {
+    VTR_ASSERT(top_pb_route != nullptr);
+    VTR_ASSERT(pb == nullptr || pb_graph_node == pb->pb_graph_node);
+    VTR_ASSERT(pb_graph_node != nullptr);
 
-    if(pb == nullptr || pb->name == nullptr) {
-        //Empty pb
-        return;
-    }
-
-    if(pb->child_pbs == nullptr) {
-        //Primitive pb
+    visitor_.visit_all(top_pb_route, pb, pb_graph_node);
+    if ((pb != nullptr) && (pb->name != nullptr) && (pb->child_pbs == nullptr)) {
         visitor_.visit_atom(pb);
-        return;
     }
 
-    //Recurse
-    const t_pb_type* pb_type = pb->pb_graph_node->pb_type;
-    if(pb_type->num_modes > 0) {
-        for(int i = 0; i < pb_type->modes[pb->mode].num_pb_type_children; i++) {
-            for(int j = 0; j < pb_type->modes[pb->mode].pb_type_children[i].num_pb; j++) {
-                walk_atoms(&pb->child_pbs[i][j]);
+    auto pb_type = pb_graph_node->pb_type;
+
+    int mode_index = 0;
+    if (pb != nullptr) {
+        mode_index = pb->mode;
+    }
+
+    auto mode = &pb_type->modes[mode_index];
+    if (pb_type->num_modes > 0) {
+        for (int i = 0; i < mode->num_pb_type_children; i++) {
+            for (int j = 0; j < mode->pb_type_children[i].num_pb; j++) {
+                if ((pb != nullptr) && (pb->child_pbs[i] != nullptr) && (pb->child_pbs[i][j].name != NULL)) {
+                    walk_blocks(top_pb_route, &pb->child_pbs[i][j], pb->child_pbs[i][j].pb_graph_node);
+                } else {
+                    walk_blocks(top_pb_route, nullptr, &pb_graph_node->child_pb_graph_nodes[mode_index][i][j]);
+                }
             }
         }
     }
 }
-
 
 void NetlistVisitor::start_impl() {
     //noop

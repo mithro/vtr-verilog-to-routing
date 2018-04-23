@@ -13,7 +13,7 @@ class NetlistWalker {
         void walk();
 
     private:
-        void walk_atoms(const t_pb* pb);
+        void walk_blocks(const t_pb_route *pb_route, const t_pb *pb, const t_pb_graph_node *pb_graph_node);
 
     private:
         NetlistVisitor& visitor_;
