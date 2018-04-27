@@ -1,4 +1,6 @@
 #include <iostream>
+#include <set>
+#include <sstream>
 
 #include "globals.h"
 #include "vtr_assert.h"
@@ -171,6 +173,83 @@ static t_block_type _get_type(std::string pb_name) {
     return ftype;
 }
 
+static bool _ignore_pin(const t_pb_graph_pin *pin) {
+    const t_block_type t = _get_type(pin->parent_node->pb_type->name);
+    return t.type == NULL_TYPE || (t.type == BLK_TYPE && t.type_blk == BLK_IG_TYPE);
+}
+
+static int _find_pb_index(const t_pb_graph_node *n) {
+    for (; n; n = n->parent_pb_graph_node)
+        if (n->pb_type->num_pb > 1)
+            return n->placement_index;
+    return -1;
+}
+
+static int _find_cell_index(const t_pb_graph_pin *pin) {
+    // Find the first parent with a non-zero number of cells, but it can't be the direct parent
+    const t_pb_graph_node *n = pin->parent_node;
+    return n ? _find_pb_index(n->parent_pb_graph_node) : -1;
+}
+
+#if 0
+static void _write_pin_name(std::ostream &o, const t_pb_graph_pin *pin) {
+    const int cell = _find_cell_index(pin);
+    o << pin->parent_node->pb_type->name;
+    if (cell >= 0)
+        o << '[' << cell << ']';
+    o << '.' << pin->port->name;
+    if (pin->port->num_pins > 1)
+        o << "[" << pin->pin_number << "]";
+}
+#endif
+
+static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int this_cell) {
+    const int pb_index = _find_pb_index(pin->parent_node);
+    const int cell = _find_cell_index(pin);
+    const t_block_type t = _get_type(pin->parent_node->pb_type->name);
+
+    if (t.type == BEL_TYPE) {
+        if (this_cell != cell)
+            o << "lutff_" << cell << '/';
+    } else if (t.type != BLK_TYPE || t.type_blk != BLK_TL_TYPE) {
+        o << t.name;
+        if (pb_index >= 0)
+            o << pb_index;
+        o << '_';
+    }
+
+    // Only print the pin name for blocks that are not part of the internal tile routing
+    if (t.type != BLK_TYPE || t.type_blk != BLK_XX_TYPE) {
+        // Trim off the i_ or o_ direction prefix
+        const std::string n = pin->port->name;
+        if ((n[0] == 'i' || n[0] == 'o') && n[1] == '_')
+            o << n.substr(2);
+        else
+            o << n;
+
+        if (pin->port->num_pins > 1)
+            o << '_';
+    }
+
+    if (pin->port->num_pins > 1)
+        o << pin->pin_number;
+
+#if 0
+    o << " (";
+    _write_pin_name(o, pin);
+    o << ')';
+#endif
+}
+
+static void _write_chain(std::ostream &o, std::list<const t_pb_graph_pin*> chain, int cell) {
+    for (auto i = chain.cbegin(); i != chain.cend();) {
+        _write_hlc_pin_name(o, *i++, cell);
+        if (i == chain.cend())
+           break;
+        o << " -> ";
+    }
+}
+
 ICE40HLCWriterVisitor::ICE40HLCWriterVisitor(std::ostream& os)
         : os_(os)
         , cur_clb_(nullptr) {
@@ -203,19 +282,32 @@ void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* cl
     const t_block_type block_type = _get_type(string(t->name));
     VTR_ASSERT(block_type.type == BLK_TYPE);
 
-    std::map<string, string> tile_types = {{"PLB", "logic"}, {"VPR_PAD", "io"}};
+    const std::map<string, string> tile_types = {{"PLB", "logic"}, {"VPR_PAD", "io"}};
 
     os_ << endl <<
-        tile_types[block_type.name] << "_tile " << (block_loc.x - 1) << ' ' <<
+        tile_types.at(block_type.name) << "_tile " << (block_loc.x - 1) << ' ' <<
         (block_loc.y - 1) << " {" << endl;
+
+    const std::map<string, string> element_prefixes = {{"PLB", "lutff"}, {"VPR_PAD", "io"}};
+    element_prefix_ = element_prefixes.at(block_type.name);
+
     cur_clb_ = clb;
 }
 
 void ICE40HLCWriterVisitor::visit_all_impl(const t_pb_route *top_pb_route, const t_pb* pb,
     const t_pb_graph_node* pb_graph_node) {
-    (void)top_pb_route;
-    (void)pb;
-    (void)pb_graph_node;
+    using std::endl;
+    using std::string;
+
+    if (!pb)
+        return;
+
+    process_ports(top_pb_route, pb, pb_graph_node->num_input_ports,
+        pb_graph_node->num_input_pins, pb_graph_node->input_pins);
+    process_ports(top_pb_route, pb, pb_graph_node->num_clock_ports,
+        pb_graph_node->num_clock_pins, pb_graph_node->clock_pins);
+    process_ports(top_pb_route, pb, pb_graph_node->num_output_ports,
+        pb_graph_node->num_output_pins, pb_graph_node->output_pins);
 }
 
 void ICE40HLCWriterVisitor::finish_impl() {
@@ -223,7 +315,124 @@ void ICE40HLCWriterVisitor::finish_impl() {
         close_tile();
 }
 
+void ICE40HLCWriterVisitor::process_ports(const t_pb_route *top_pb_route,
+    const t_pb* pb, const int num_ports, const int *num_pins, const t_pb_graph_pin *const *pins) {
+    for (int port_index = 0; port_index < num_ports; ++port_index) {
+        for (int pin_index = 0; pin_index < num_pins[port_index]; ++pin_index) {
+            const t_pb_graph_pin *const pin = &pins[port_index][pin_index];
+            const t_pb_route *const pb_route = &top_pb_route[pin->pin_count_in_cluster];
+            if (pb_route->atom_net_id != AtomNetId::INVALID() &&
+                !_ignore_pin(pin))
+                process_route(top_pb_route, pb_route, pin, pb);
+        }
+    }
+}
+
+void ICE40HLCWriterVisitor::process_route(const t_pb_route *top_pb_route, const t_pb_route *pb_route,
+    const t_pb_graph_pin *pin, const t_pb* pb) {
+    using std::endl;
+
+    // Iterate up the chain of drivers until a non-ignored pin is encountered
+    const t_pb_route *driver = nullptr;
+    int driver_id = pb_route->driver_pb_pin_id;
+    while (driver_id != -1) {
+        driver = &top_pb_route[driver_id];
+        if (!_ignore_pin(driver->pb_graph_pin))
+            break;
+        driver_id = driver->driver_pb_pin_id;
+    }
+
+    // Found no non-ignored driver
+    if (driver_id == -1 || !driver)
+        return;
+
+    links_.emplace_back(link{driver->pb_graph_pin, pin, pb});
+}
+
+std::list<const t_pb_graph_pin*> ICE40HLCWriterVisitor::collect_chain(
+    const t_pb_graph_pin *tip, bool up) {
+    typedef const t_pb_graph_pin* t_p;
+    typedef std::list<t_p> t_chain;
+
+    t_chain chain({tip});
+    std::vector<link>::iterator iter;
+    const auto from = up ? &link::sink_ : &link::source_;
+    const auto to = up ? &link::source_ : &link::sink_;
+    const auto push_head = up ? (void (t_chain::*)(const t_p&))&t_chain::push_front :
+        (void (t_chain::*)(const t_p&))&t_chain::push_back;
+
+    do {
+        for (iter = links_.begin(); iter != links_.end(); iter++) {
+            if ((*iter).*from == tip) {
+                tip = (*iter).*to;
+                (chain.*push_head)(tip);
+                links_.erase(iter);
+                break;
+            }
+        }
+    } while (iter != links_.end());
+
+    if (chain.size() <= 1)
+        return t_chain();
+    return chain;
+}
+
 void ICE40HLCWriterVisitor::close_tile() {
+    using std::endl;
+    using std::set;
+    using std::string;
+
+    // List the pins
+    typedef std::pair<const t_pb_graph_pin*, const t_pb*> t_pin_atom;
+    set<t_pin_atom> pins;
+    for (const link &l : links_) {
+        pins.insert({l.source_, l.pb_});
+        pins.insert({l.sink_, l.pb_});
+    }
+
+    // Find which cells are present
+    std::map<int, set<t_pin_atom>> cells;
+    for (const t_pin_atom &p : pins) {
+        const int cell = _find_cell_index(p.first);
+        if (cell != -1)
+            cells[cell].insert(p);
+    }
+
+    // Add the chains for each element
+    for (const auto cell : cells) {
+        std::ostringstream ss;
+        ss << cell.first;
+        auto &element_lines = (*elements_.insert(
+            std::make_pair(ss.str(), std::vector<string>())).first).second;
+        for (const t_pin_atom &pa : cell.second) {
+            std::ostringstream ss2;
+            const auto input_chain = collect_chain(pa.first, true);
+            if (!input_chain.empty())
+                _write_chain(ss2, input_chain, cell.first);
+            else {
+                const auto output_chain = collect_chain(pa.first, false);
+                if (output_chain.empty())
+                    continue;
+                _write_chain(ss2, output_chain, cell.first);
+            }
+
+#if 0
+            ss2 << "  # " << pa.second->name;
+#endif
+            element_lines.push_back(ss2.str());
+        }
+    }
+
+    // Print the element content
+    for (auto i = elements_.cbegin(); i != elements_.cend(); i++) {
+        os_ << "    " << element_prefix_ << '_' << (*i).first << " {" << endl;
+        for (const string &line : (*i).second)
+            os_ << "        " << line << endl;
+        os_ << "    }" << endl;
+    }
+
     os_ << '}' << std::endl;
+    elements_.clear();
+    links_.clear();
     cur_clb_ = nullptr;
 }
