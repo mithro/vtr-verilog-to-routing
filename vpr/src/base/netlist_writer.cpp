@@ -1126,7 +1126,8 @@ class NetlistWriterVisitor : public NetlistVisitor {
         //Returns an Instance object representing the LUT
         std::shared_ptr<Instance> make_lut_instance(const t_pb* atom)  {
             //Determine what size LUT
-            int lut_size = find_num_inputs(atom);
+            const int lut_size = std::accumulate(atom->pb_graph_node->num_input_pins,
+                atom->pb_graph_node->num_input_pins + atom->pb_graph_node->num_input_ports, 0);
 
             //Determine the truth table
             auto lut_mask = load_lut_mask(lut_size, atom);
@@ -1848,16 +1849,6 @@ class NetlistWriterVisitor : public NetlistVisitor {
                 i++;
             }
             return input_values;
-        }
-
-
-        //Returns the total number of input pins on the given pb
-        int find_num_inputs(const t_pb* pb) {
-            int count = 0;
-            for(int i = 0; i < pb->pb_graph_node->num_input_ports; i++) {
-                count += pb->pb_graph_node->num_input_pins[i];
-            }
-            return count;
         }
 
         //Returns the logical net ID

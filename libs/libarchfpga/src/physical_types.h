@@ -31,6 +31,7 @@
 #include <string>
 #include <map>
 #include <limits>
+#include <numeric>
 
 #include "vtr_ndmatrix.h"
 
@@ -821,21 +822,9 @@ struct t_pb_graph_node {
     //Returns the number of pins on this graph node
     //  Note this is the total for all ports on this node exluding any children (i.e. sum of all num_input_pins, num_output_pins, num_clock_pins)
     int num_pins() {
-        int npins = 0;
-
-        for(int iport = 0; iport < num_input_ports; ++iport) {
-            npins += num_input_pins[iport];
-        }
-
-        for(int iport = 0; iport < num_output_ports; ++iport) {
-            npins += num_output_pins[iport];
-        }
-
-        for(int iport = 0; iport < num_clock_ports; ++iport) {
-            npins += num_clock_pins[iport];
-        }
-
-        return npins;
+        return std::accumulate(num_input_pins, num_input_pins + num_input_ports, 0) +
+            std::accumulate(num_output_pins, num_output_pins + num_output_ports, 0) +
+            std::accumulate(num_clock_pins, num_clock_pins + num_clock_ports, 0);
     }
 };
 
