@@ -1,6 +1,8 @@
 #ifndef ICE40_HLC_H
 #define ICE40_HLC_H
 
+#include <tuple>
+
 #include "netlist_walker.h"
 
 class ICE40HLCWriterVisitor : public NetlistVisitor {
@@ -14,7 +16,13 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
             const t_pb_graph_node* pb_graph_node) override;
         void finish_impl() override;
 
+    private:
+        void close_tile();
+
+    private:
         std::ostream& os_;
+
+        const t_pb* cur_clb_;
 };
 
 #endif
