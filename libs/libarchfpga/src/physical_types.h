@@ -96,8 +96,29 @@ enum e_pin_location_distr {
 
 /* pb_type class */
 enum e_pb_type_class {
-	UNKNOWN_CLASS = 0, LUT_CLASS = 1, LATCH_CLASS = 2, MEMORY_CLASS = 3
+    UNKNOWN_CLASS = 0,
+    LUT_CLASS = 1,
+    LATCH_CLASS = 2,
+    MEMORY_CLASS = 3,
+    NUM_CLASSES
 };
+
+// Set of all side orientations
+constexpr std::array<e_pb_type_class, NUM_CLASSES> TYPE_CLASSES = {
+    {UNKNOWN_CLASS, LUT_CLASS, LATCH_CLASS, MEMORY_CLASS} };
+
+// String versions of pb_type_class orientations
+constexpr std::array<const char*, NUM_CLASSES> TYPE_CLASS_STRING = {
+    {"unknown", "lut", "flipflop", "memory"} };
+
+enum e_pb_type_level {
+    HIERARCHY_ROOT = 0,
+    HIERARCHY_INTERMEDIATE,
+    HIERARCHY_LEAF,
+    HIERARCHY_PRIMITIVE,
+    NUM_HIERACHY,
+} ;
+
 
 /* Annotations for pin-to-pin connections */
 enum e_pin_to_pin_annotation_type {
