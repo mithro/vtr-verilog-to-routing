@@ -2,8 +2,10 @@
 #include <set>
 #include <sstream>
 
+#include "atom_netlist_utils.h"
 #include "globals.h"
 #include "vtr_assert.h"
+#include "vtr_logic.h"
 
 #include "ice40_hlc.h"
 
@@ -185,15 +187,14 @@ static int _find_pb_index(const t_pb_graph_node *n) {
     return -1;
 }
 
-static int _find_cell_index(const t_pb_graph_pin *pin) {
+static int _find_cell_index(const t_pb_graph_node *n) {
     // Find the first parent with a non-zero number of cells, but it can't be the direct parent
-    const t_pb_graph_node *n = pin->parent_node;
     return n ? _find_pb_index(n->parent_pb_graph_node) : -1;
 }
 
 #if 0
 static void _write_pin_name(std::ostream &o, const t_pb_graph_pin *pin) {
-    const int cell = _find_cell_index(pin);
+    const int cell = _find_cell_index(pin->parent_node);
     o << pin->parent_node->pb_type->name;
     if (cell >= 0)
         o << '[' << cell << ']';
@@ -205,7 +206,7 @@ static void _write_pin_name(std::ostream &o, const t_pb_graph_pin *pin) {
 
 static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int this_cell) {
     const int pb_index = _find_pb_index(pin->parent_node);
-    const int cell = _find_cell_index(pin);
+    const int cell = _find_cell_index(pin->parent_node);
     const t_block_type t = _get_type(pin->parent_node->pb_type->name);
 
     if (t.type == BEL_TYPE) {
@@ -250,6 +251,108 @@ static void _write_chain(std::ostream &o, std::list<const t_pb_graph_pin*> chain
     }
 }
 
+static const t_pb* _find_top_cb(const t_pb* curr) {
+    //Walk up through the pb graph until curr
+    //has no parent, at which point it will be the top pb
+    const t_pb* parent = curr->parent_pb;
+    while(parent != nullptr) {
+        curr = parent;
+        parent = curr->parent_pb;
+    }
+    return curr;
+}
+
+static const t_pb_route* _find_top_pb_route(const t_pb* curr) {
+    const auto& cluster_ctx = g_vpr_ctx.clustering();
+
+    const t_pb* top_pb = _find_top_cb(curr);
+
+    const t_pb_route* top_pb_route = nullptr;
+    for(auto blk_id : cluster_ctx.clb_nlist.blocks()) {
+        if(cluster_ctx.clb_nlist.block_pb(blk_id) == top_pb) {
+            top_pb_route = cluster_ctx.clb_nlist.block_pb(blk_id)->pb_route;
+            break;
+        }
+    }
+    VTR_ASSERT(top_pb_route);
+    return top_pb_route;
+}
+
+static AtomNetId _find_atom_input_logical_net(const t_pb* atom, int atom_input_idx) {
+    const t_pb_graph_node* pb_node = atom->pb_graph_node;
+    const int cluster_pin_idx = pb_node->input_pins[0][atom_input_idx].pin_count_in_cluster;
+    const t_pb_route* top_pb_route = _find_top_pb_route(atom);
+    return top_pb_route[cluster_pin_idx].atom_net_id;
+}
+
+//Helper function for load_lut_mask() which determines how the LUT inputs were
+//permuted compared to the input BLIF
+//
+//  Since the LUT inputs may have been rotated from the input blif specification we need to
+//  figure out this permutation to reflect the physical implementation connectivity.
+//
+//  We return a permutation map (which is a list of swaps from index to index)
+//  which is then applied to do the rotation of the lutmask.
+//
+//  The net in the atom netlist which was originally connected to pin i, is connected
+//  to pin permute[i] in the implementation.
+static std::vector<int> _determine_lut_permutation(size_t num_inputs, const t_pb* atom_pb) {
+    auto& atom_ctx = g_vpr_ctx.atom();
+
+    std::vector<int> permute(num_inputs, OPEN);
+
+    //Determine the permutation
+    //
+    //We walk through the logical inputs to this atom (i.e. in the original truth table/netlist)
+    //and find the corresponding input in the implementation atom (i.e. in the current netlist)
+    auto ports = atom_ctx.nlist.block_input_ports(atom_ctx.lookup.pb_atom(atom_pb));
+    if(ports.size() == 1) {
+        const t_pb_graph_node* gnode = atom_pb->pb_graph_node;
+        VTR_ASSERT(gnode->num_input_ports == 1);
+        VTR_ASSERT(gnode->num_input_pins[0] >= (int) num_inputs);
+
+        AtomPortId port_id = *ports.begin();
+
+        for(size_t ipin = 0; ipin < num_inputs; ++ipin) {
+            //The net currently connected to input j
+            const AtomNetId impl_input_net_id = _find_atom_input_logical_net(atom_pb, ipin);
+
+            //Find the original pin index
+            const t_pb_graph_pin* gpin = &gnode->input_pins[0][ipin];
+            const BitIndex orig_index = atom_pb->atom_pin_bit_index(gpin);
+
+            if(impl_input_net_id) {
+                //If there is a valid net connected in the implementation
+                AtomNetId logical_net_id = atom_ctx.nlist.port_net(port_id, orig_index);
+                VTR_ASSERT(impl_input_net_id == logical_net_id);
+
+                //Mark the permutation.
+                //  The net originally located at orig_index in the atom netlist
+                //  was moved to ipin in the implementation
+                permute[orig_index] = ipin;
+            }
+        }
+    } else {
+        //May have no inputs on a constant generator
+        VTR_ASSERT(ports.size() == 0);
+    }
+
+    //Fill in any missing values in the permutation (i.e. zeros)
+    std::set<int> perm_indicies(permute.begin(), permute.end());
+    size_t unused_index = 0;
+    for(size_t i = 0; i < permute.size(); i++) {
+        if(permute[i] == OPEN) {
+            while(perm_indicies.count(unused_index)) {
+                unused_index++;
+            }
+            permute[i] = unused_index;
+            perm_indicies.insert(unused_index);
+        }
+    }
+
+    return permute;
+}
+
 ICE40HLCWriterVisitor::ICE40HLCWriterVisitor(std::ostream& os)
         : os_(os)
         , cur_clb_(nullptr) {
@@ -265,6 +368,33 @@ void ICE40HLCWriterVisitor::visit_top_impl(const char* top_level_name) {
         (device_ctx.grid.width() - 2) << ' ' <<
         (device_ctx.grid.height() - 2) << endl << endl <<
         "warmboot = on" << endl;
+}
+
+void ICE40HLCWriterVisitor::visit_atom_impl(const t_pb* atom) {
+    const auto& atom_ctx = g_vpr_ctx.atom();
+    const t_model *const model = atom_ctx.nlist.block_model(atom_ctx.lookup.pb_atom(atom));
+
+    if(model->name != std::string(MODEL_NAMES))
+        return;
+
+    // Write the LUT config
+    const int num_inputs = atom->pb_graph_node->total_input_pins();
+    const std::vector<int> permute = _determine_lut_permutation(num_inputs, atom);
+    const auto& truth_table = atom_ctx.nlist.block_truth_table(atom_ctx.lookup.pb_atom(atom));
+    const auto permuted_truth_table = permute_truth_table(truth_table, num_inputs, permute);
+    const auto mask = truth_table_to_lut_mask(permuted_truth_table, num_inputs);
+
+    const int cell = _find_cell_index(atom->pb_graph_node);
+    std::ostringstream ss;
+    ss << cell;
+    auto &element_lines = (*elements_.insert(
+        std::make_pair(ss.str(), std::vector<std::string>())).first).second;
+
+    std::ostringstream ss2;
+    ss2 << "out = " << mask.size() << "'b";
+    for (const vtr::LogicValue &v : mask)
+        ss2 << ((v == vtr::LogicValue::TRUE) ? '1' : '0');
+    element_lines.push_back(ss2.str());
 }
 
 void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* clb) {
@@ -393,7 +523,7 @@ void ICE40HLCWriterVisitor::close_tile() {
     // Find which cells are present
     std::map<int, set<t_pin_atom>> cells;
     for (const t_pin_atom &p : pins) {
-        const int cell = _find_cell_index(p.first);
+        const int cell = _find_cell_index(p.first->parent_node);
         if (cell != -1)
             cells[cell].insert(p);
     }
