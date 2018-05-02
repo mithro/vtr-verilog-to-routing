@@ -431,7 +431,9 @@ void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* cl
         os_ << block_type.name;
     }
 
-    os_ << "_tile " << (block_loc.x - 1) << ' ' << (block_loc.y - 1) << " {" << endl;
+    const auto& device_ctx = g_vpr_ctx.device();
+    os_ << "_tile " << (block_loc.x - 1) << ' ' <<
+        (device_ctx.grid.height() - block_loc.y - 2) << " {" << endl;
 
     const std::map<string, string> element_prefixes = {{"PLB", "lutff"}, {"PIO", "io"}};
     try {
