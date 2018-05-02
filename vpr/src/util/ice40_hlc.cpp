@@ -133,6 +133,13 @@ static t_block_type _get_type(std::string pb_name) {
     ftype.type_raw = 0;
     ftype.name = pb_name.substr(7);
 
+    // Trim the edge specification off
+    if (ftype.name[ftype.name.size() - 2] == '_') {
+        const auto c = ftype.name[ftype.name.size() - 1];
+        if (c == 'L' || c == 'T' || c == 'R' || c == 'B')
+            ftype.name = ftype.name.substr(0, ftype.name.size() - 2);
+    }
+
     for (unsigned int i = 0; i < ptypename.size(); i++) {
         if (ptype_str == ptypename[i]) {
             ftype.type = TYPES[i];
