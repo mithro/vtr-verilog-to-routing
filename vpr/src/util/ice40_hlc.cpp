@@ -555,7 +555,7 @@ void ICE40HLCWriterVisitor::close_tile() {
             cells[cell].insert(p);
     }
 
-    // Add the chains for each element
+    // Add the inputs for each element
     for (const auto cell : cells) {
         std::ostringstream ss;
         ss << cell.first;
@@ -564,19 +564,26 @@ void ICE40HLCWriterVisitor::close_tile() {
         for (const t_pin_atom &pa : cell.second) {
             std::ostringstream ss2;
             const auto input_chain = collect_chain(pa.first, true);
-            if (!input_chain.empty())
+            if (!input_chain.empty()) {
                 _write_chain(ss2, input_chain, cell.first);
-            else {
-                const auto output_chain = collect_chain(pa.first, false);
-                if (output_chain.empty())
-                    continue;
-                _write_chain(ss2, output_chain, cell.first);
+                element_lines.push_back(ss2.str());
             }
+        }
+    }
 
-#if 0
-            ss2 << "  # " << pa.second->name;
-#endif
-            element_lines.push_back(ss2.str());
+    // Add the outputs for each element
+    for (const auto cell : cells) {
+        std::ostringstream ss;
+        ss << cell.first;
+        auto &element_lines = (*elements_.insert(
+            std::make_pair(ss.str(), std::vector<string>())).first).second;
+        for (const t_pin_atom &pa : cell.second) {
+            std::ostringstream ss2;
+            const auto output_chain = collect_chain(pa.first, false);
+            if (!output_chain.empty()) {
+                _write_chain(ss2, output_chain, cell.first);
+                element_lines.push_back(ss2.str());
+            }
         }
     }
 
