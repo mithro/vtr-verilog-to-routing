@@ -546,6 +546,7 @@ void ICE40HLCWriterVisitor::close_tile() {
     using std::endl;
     using std::set;
     using std::string;
+    using std::to_string;
 
     // List the pins
     typedef std::pair<const t_pb_graph_pin*, const t_pb*> t_pin_atom;
@@ -565,10 +566,8 @@ void ICE40HLCWriterVisitor::close_tile() {
 
     // Add the inputs for each element
     for (const auto cell : cells) {
-        std::ostringstream ss;
-        ss << cell.first;
         auto &element_lines = (*elements_.insert(
-            std::make_pair(ss.str(), std::vector<string>())).first).second;
+            std::make_pair(to_string(cell.first), std::vector<string>())).first).second;
         for (const t_pin_atom &pa : cell.second) {
             std::ostringstream ss2;
             const auto input_chain = collect_chain(pa.first, true);
@@ -581,10 +580,8 @@ void ICE40HLCWriterVisitor::close_tile() {
 
     // Add the outputs for each element
     for (const auto cell : cells) {
-        std::ostringstream ss;
-        ss << cell.first;
         auto &element_lines = (*elements_.insert(
-            std::make_pair(ss.str(), std::vector<string>())).first).second;
+            std::make_pair(to_string(cell.first), std::vector<string>())).first).second;
         for (const t_pin_atom &pa : cell.second) {
             std::ostringstream ss2;
             const auto output_chain = collect_chain(pa.first, false);
