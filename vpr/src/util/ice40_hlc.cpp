@@ -548,6 +548,8 @@ void ICE40HLCWriterVisitor::close_tile() {
     using std::string;
     using std::to_string;
 
+    set<int> input_cells, output_cells;
+
     // List the pins
     typedef std::pair<const t_pb_graph_pin*, const t_pb*> t_pin_atom;
     set<t_pin_atom> pins;
@@ -574,6 +576,7 @@ void ICE40HLCWriterVisitor::close_tile() {
             if (!input_chain.empty()) {
                 _write_chain(ss2, input_chain, cell.first);
                 element_lines.push_back(ss2.str());
+                input_cells.insert(cell.first);
             }
         }
     }
@@ -588,8 +591,31 @@ void ICE40HLCWriterVisitor::close_tile() {
             if (!output_chain.empty()) {
                 _write_chain(ss2, output_chain, cell.first);
                 element_lines.push_back(ss2.str());
+                output_cells.insert(cell.first);
             }
         }
+    }
+
+    // Add type-specific options
+    switch (cur_clb_type_) {
+    case clb_type::PIO:
+        for (const auto cell : cells) {
+            auto &element_lines = (*elements_.insert(
+                std::make_pair(to_string(cell.first), std::vector<string>())).first).second;
+            element_lines.push_back("disable_pull_up");
+
+            if (input_cells.find(cell.first) != input_cells.end()) {
+                element_lines.push_back("output_pin_type = simple_output_pin");
+            }
+
+            if (output_cells.find(cell.first) != output_cells.end()) {
+                element_lines.push_back("enable_input");
+                element_lines.push_back("input_pin_type = simple_input_pin");
+            }
+        }
+        break;
+    default:
+        break;
     }
 
     // Print the element content
