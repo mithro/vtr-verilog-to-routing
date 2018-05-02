@@ -10,6 +10,12 @@
 
 class ICE40HLCWriterVisitor : public NetlistVisitor {
     public:
+        enum class clb_type {
+            UNKNOWN,
+            PLB,
+            PIO
+        };
+
         struct link {
             const t_pb_graph_pin *source_;
             const t_pb_graph_pin *sink_;
@@ -39,6 +45,7 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
         std::ostream& os_;
 
         const t_pb* cur_clb_;
+        clb_type cur_clb_type_;
 
         /// A list of source to sink links
         std::vector<link> links_;

@@ -370,7 +370,8 @@ static std::vector<int> _determine_lut_permutation(size_t num_inputs, const t_pb
 
 ICE40HLCWriterVisitor::ICE40HLCWriterVisitor(std::ostream& os)
         : os_(os)
-        , cur_clb_(nullptr) {
+        , cur_clb_(nullptr)
+        , cur_clb_type_(clb_type::UNKNOWN) {
 }
 
 void ICE40HLCWriterVisitor::visit_top_impl(const char* top_level_name) {
@@ -427,12 +428,19 @@ void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* cl
     const t_block_type block_type = _get_type(string(t->name));
     VTR_ASSERT(block_type.type == BLK_TYPE);
 
-    const std::map<string, string> tile_types = {{"PLB", "logic"}, {"PIO", "io"}};
+    const std::map<string, clb_type> block_types = {{"PLB", clb_type::PLB}, {"PIO", clb_type::PIO}};
+    try {
+        cur_clb_type_ = block_types.at(block_type.name);
+    } catch (const std::out_of_range&) {
+        cur_clb_type_ = clb_type::UNKNOWN;
+    }
+
+    const std::map<clb_type, string> tile_types = {{clb_type::PLB, "logic"}, {clb_type::PIO, "io"}};
 
     os_ << endl;
 
     try {
-        os_ << tile_types.at(block_type.name);
+        os_ << tile_types.at(cur_clb_type_);
     } catch (const std::out_of_range&) {
         os_ << block_type.name;
     }
@@ -441,9 +449,9 @@ void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* cl
     os_ << "_tile " << (block_loc.x - 1) << ' ' <<
         (device_ctx.grid.height() - block_loc.y - 2) << " {" << endl;
 
-    const std::map<string, string> element_prefixes = {{"PLB", "lutff"}, {"PIO", "io"}};
+    const std::map<clb_type, string> element_prefixes = {{clb_type::PLB, "lutff"}, {clb_type::PIO, "io"}};
     try {
-        element_prefix_ = element_prefixes.at(block_type.name);
+        element_prefix_ = element_prefixes.at(cur_clb_type_);
     } catch (const std::out_of_range&) {
         element_prefix_ = block_type.name;
     }
@@ -599,4 +607,5 @@ void ICE40HLCWriterVisitor::close_tile() {
     elements_.clear();
     links_.clear();
     cur_clb_ = nullptr;
+    cur_clb_type_ = clb_type::UNKNOWN;
 }
