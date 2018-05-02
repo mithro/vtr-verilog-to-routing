@@ -9,6 +9,9 @@
 
 #include "ice40_hlc.h"
 
+// #define DEBUG_NETS
+// #define DEBUG_NO_IGNORE
+
 /** Get the "block type" from a pb_type.
  */
 typedef enum e_ptype {
@@ -183,6 +186,9 @@ static t_block_type _get_type(std::string pb_name) {
 }
 
 static bool _ignore_pin(const t_pb_graph_pin *pin) {
+#ifdef DEBUG_NO_IGNORE
+    return false;
+#endif
     const t_block_type t = _get_type(pin->parent_node->pb_type->name);
     return t.type == NULL_TYPE || (t.type == BLK_TYPE && t.type_blk == BLK_IG_TYPE);
 }
@@ -199,7 +205,7 @@ static int _find_cell_index(const t_pb_graph_node *n) {
     return n ? _find_pb_index(n->parent_pb_graph_node) : -1;
 }
 
-#if 0
+#ifdef DEBUG_NETS
 static void _write_pin_name(std::ostream &o, const t_pb_graph_pin *pin) {
     const int cell = _find_cell_index(pin->parent_node);
     o << pin->parent_node->pb_type->name;
@@ -244,7 +250,7 @@ static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int 
     if (pin->port->num_pins > 1)
         o << pin->pin_number;
 
-#if 0
+#ifdef DEBUG_NETS
     o << " (";
     _write_pin_name(o, pin);
     o << ')';
