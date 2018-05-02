@@ -419,7 +419,7 @@ void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* cl
     const t_block_type block_type = _get_type(string(t->name));
     VTR_ASSERT(block_type.type == BLK_TYPE);
 
-    const std::map<string, string> tile_types = {{"PLB", "logic"}, {"VPR_PAD", "io"}};
+    const std::map<string, string> tile_types = {{"PLB", "logic"}, {"PIO", "io"}};
 
     os_ << endl;
 
@@ -431,7 +431,7 @@ void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* cl
 
     os_ << "_tile " << (block_loc.x - 1) << ' ' << (block_loc.y - 1) << " {" << endl;
 
-    const std::map<string, string> element_prefixes = {{"PLB", "lutff"}, {"VPR_PAD", "io"}};
+    const std::map<string, string> element_prefixes = {{"PLB", "lutff"}, {"PIO", "io"}};
     try {
         element_prefix_ = element_prefixes.at(block_type.name);
     } catch (const std::out_of_range&) {
