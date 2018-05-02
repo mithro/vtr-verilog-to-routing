@@ -216,9 +216,11 @@ static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int 
     const int cell = _find_cell_index(pin->parent_node);
     const t_block_type t = _get_type(pin->parent_node->pb_type->name);
 
-    if (t.type == BEL_TYPE) {
-        if (this_cell != cell)
-            o << "lutff_" << cell << '/';
+    if (t.type == BEL_TYPE || t.type == PAD_TYPE) {
+        if (this_cell != cell) {
+            const std::map<t_ptype, std::string> prefix = {{BEL_TYPE, "lutff"}, {PAD_TYPE, "io"}};
+            o << prefix.at(t.type) << '_' << cell << '/';
+        }
     } else if (t.type != BLK_TYPE || t.type_blk != BLK_TL_TYPE) {
         o << t.name;
         if (pb_index >= 0)
