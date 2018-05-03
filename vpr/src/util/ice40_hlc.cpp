@@ -201,8 +201,13 @@ static int _find_pb_index(const t_pb_graph_node *n) {
 }
 
 static int _find_cell_index(const t_pb_graph_node *n) {
-    // Find the first parent with a non-zero number of cells, but it can't be the direct parent
-    return n ? _find_pb_index(n->parent_pb_graph_node) : -1;
+    for (; n; n = n->parent_pb_graph_node) {
+        const t_block_type t = _get_type(n->pb_type->name);
+        if (n->pb_type->num_pb > 1 && (t.type != BLK_TYPE || t.type_blk != BLK_XX_TYPE))
+            return n->placement_index;
+    }
+
+    return -1;
 }
 
 #ifdef DEBUG_NETS
