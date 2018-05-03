@@ -508,20 +508,26 @@ void ICE40HLCWriterVisitor::process_route(const t_pb_route *top_pb_route, const 
     using std::endl;
 
     // Iterate up the chain of drivers until a non-ignored pin is encountered
+    const t_pb_graph_pin *const driven_pin = pin;
     const t_pb_route *driver = nullptr;
     int driver_id = pb_route->driver_pb_pin_id;
+    bool any_mux_edges = false;
     while (driver_id != -1) {
         driver = &top_pb_route[driver_id];
+        any_mux_edges |= std::any_of(
+            pin->input_edges, pin->input_edges + pin->num_input_edges,
+            [](const t_pb_graph_edge *e) { return e->interconnect->type == MUX_INTERC; });
         if (!_ignore_pin(driver->pb_graph_pin))
             break;
         driver_id = driver->driver_pb_pin_id;
+        pin = driver->pb_graph_pin;
     }
 
-    // Found no non-ignored driver
-    if (driver_id == -1 || !driver)
+    // Found a non-ignored driver, beyond a mux
+    if (driver_id == -1 || !driver || !any_mux_edges)
         return;
 
-    links_.emplace_back(link{driver->pb_graph_pin, pin, pb});
+    links_.emplace_back(link{driver->pb_graph_pin, driven_pin, pb});
 }
 
 std::list<const t_pb_graph_pin*> ICE40HLCWriterVisitor::collect_chain(
