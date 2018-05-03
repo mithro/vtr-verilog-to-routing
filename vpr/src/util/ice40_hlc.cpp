@@ -225,7 +225,12 @@ static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int 
     if (t.type == BEL_TYPE || t.type == PAD_TYPE) {
         if (this_cell != cell) {
             const std::map<t_ptype, std::string> prefix = {{BEL_TYPE, "lutff"}, {PAD_TYPE, "io"}};
-            o << prefix.at(t.type) << '_' << cell << '/';
+            o << prefix.at(t.type) << '_';
+            if (cell >= 0)
+                o << cell;
+            else
+                o << "global";
+            o << '/';
         }
     } else if (t.type != BLK_TYPE || t.type_blk != BLK_TL_TYPE) {
         o << t.name;
