@@ -542,6 +542,25 @@ std::list<const t_pb_graph_pin*> ICE40HLCWriterVisitor::collect_chain(
     return chain;
 }
 
+bool ICE40HLCWriterVisitor::write_cell_chains(int cell, const std::set<t_pin_atom> &pin_atoms, bool up) {
+    if (pin_atoms.empty())
+        return false;
+
+    auto &element_lines = (*elements_.insert(
+        std::make_pair(std::to_string(cell), std::vector<std::string>())).first).second;
+    bool found_chain = false;
+    for (const t_pin_atom &pa : pin_atoms) {
+        std::ostringstream ss2;
+        const auto chain = collect_chain(pa.first, up);
+        if (!chain.empty()) {
+            _write_chain(ss2, chain, cell);
+            element_lines.push_back(ss2.str());
+            found_chain = true;
+        }
+    }
+    return found_chain;
+}
+
 void ICE40HLCWriterVisitor::close_tile() {
     using std::endl;
     using std::set;
@@ -551,7 +570,6 @@ void ICE40HLCWriterVisitor::close_tile() {
     set<int> input_cells, output_cells;
 
     // List the pins
-    typedef std::pair<const t_pb_graph_pin*, const t_pb*> t_pin_atom;
     set<t_pin_atom> pins;
     for (const link &l : links_) {
         pins.insert({l.source_, l.pb_});
@@ -567,34 +585,16 @@ void ICE40HLCWriterVisitor::close_tile() {
     }
 
     // Add the inputs for each element
-    for (const auto cell : cells) {
-        auto &element_lines = (*elements_.insert(
-            std::make_pair(to_string(cell.first), std::vector<string>())).first).second;
-        for (const t_pin_atom &pa : cell.second) {
-            std::ostringstream ss2;
-            const auto input_chain = collect_chain(pa.first, true);
-            if (!input_chain.empty()) {
-                _write_chain(ss2, input_chain, cell.first);
-                element_lines.push_back(ss2.str());
+    for (const auto cell : cells)
+        if (cell.first != -1)
+            if (write_cell_chains(cell.first, cell.second, true))
                 input_cells.insert(cell.first);
-            }
-        }
-    }
 
     // Add the outputs for each element
-    for (const auto cell : cells) {
-        auto &element_lines = (*elements_.insert(
-            std::make_pair(to_string(cell.first), std::vector<string>())).first).second;
-        for (const t_pin_atom &pa : cell.second) {
-            std::ostringstream ss2;
-            const auto output_chain = collect_chain(pa.first, false);
-            if (!output_chain.empty()) {
-                _write_chain(ss2, output_chain, cell.first);
-                element_lines.push_back(ss2.str());
+    for (const auto cell : cells)
+        if (cell.first != -1)
+            if (write_cell_chains(cell.first, cell.second, false))
                 output_cells.insert(cell.first);
-            }
-        }
-    }
 
     // Add type-specific options
     switch (cur_clb_type_) {
