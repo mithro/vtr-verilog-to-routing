@@ -630,15 +630,13 @@ void ICE40HLCWriterVisitor::close_tile() {
 
     // Add the inputs for each element
     for (const auto cell : cells)
-        if (cell.first != -1)
-            if (write_cell_chains(cell.first, cell.second, true))
-                input_cells.insert(cell.first);
+        if (write_cell_chains(cell.first, cell.second, true))
+            input_cells.insert(cell.first);
 
     // Add the outputs for each element
     for (const auto cell : cells)
-        if (cell.first != -1)
-            if (write_cell_chains(cell.first, cell.second, false))
-                output_cells.insert(cell.first);
+        if (write_cell_chains(cell.first, cell.second, false))
+            output_cells.insert(cell.first);
 
     // Add type-specific options
     switch (cur_clb_type_) {
