@@ -226,6 +226,16 @@ static std::string _strip_io_prefix(const std::string n) {
     return ((n[0] == 'i' || n[0] == 'o') && n[1] == '_') ? n.substr(2) : n;
 }
 
+/**
+ * Returns @c true if both pins are in the same block, and their names match, when the @c i_
+ * and @c o_ prefix is stripped off.
+ */
+static bool _both_pins_in_routing_block(const t_pb_graph_pin *const a, const t_pb_graph_pin *const b) {
+    return a->port->parent_pb_type == b->port->parent_pb_type &&
+        a->pin_number == b->pin_number &&
+        _strip_io_prefix(a->port->name) == _strip_io_prefix(b->port->name);
+}
+
 static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int this_cell) {
     const int pb_index = _find_pb_index(pin->parent_node);
     const int cell = _find_cell_index(pin->parent_node);
@@ -509,27 +519,28 @@ void ICE40HLCWriterVisitor::process_route(const t_pb_route *top_pb_route, const 
     const t_pb_graph_pin *pin, const t_pb* pb) {
     using std::endl;
 
-    // Iterate up the chain of drivers until a non-ignored pin is encountered
-    const t_pb_graph_pin *const driven_pin = pin;
+    // Iterate up the chain of drivers adding links as each non-ignored pin is encountered
+    const t_pb_graph_pin *driven_pin = pin;
     const t_pb_route *driver = nullptr;
     int driver_id = pb_route->driver_pb_pin_id;
     bool any_mux_edges = false;
     while (driver_id != -1) {
         driver = &top_pb_route[driver_id];
-        any_mux_edges |= std::any_of(
-            pin->input_edges, pin->input_edges + pin->num_input_edges,
+        const t_pb_graph_pin *const driver_pin = driver->pb_graph_pin;
+
+        any_mux_edges |= std::any_of(pin->input_edges, pin->input_edges + pin->num_input_edges,
             [](const t_pb_graph_edge *e) { return e->interconnect->type == MUX_INTERC; });
-        if (!_ignore_pin(driver->pb_graph_pin))
-            break;
+
+        if (!_ignore_pin(driver_pin) &&
+            !_both_pins_in_routing_block(driver_pin, driven_pin) &&
+            any_mux_edges) {
+            links_.emplace_back(link{driver_pin, driven_pin, pb});
+            driven_pin = driver_pin;
+        }
+
         driver_id = driver->driver_pb_pin_id;
-        pin = driver->pb_graph_pin;
+        pin = driver_pin;
     }
-
-    // Found a non-ignored driver, beyond a mux
-    if (driver_id == -1 || !driver || !any_mux_edges)
-        return;
-
-    links_.emplace_back(link{driver->pb_graph_pin, driven_pin, pb});
 }
 
 std::list<const t_pb_graph_pin*> ICE40HLCWriterVisitor::collect_chain(
