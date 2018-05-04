@@ -545,10 +545,11 @@ void ICE40HLCWriterVisitor::process_route(const t_pb_route *top_pb_route, const 
             [](const t_pb_graph_edge *e) { return e->interconnect->type == MUX_INTERC; });
 
         if (!_ignore_pin(driver_pin) &&
-            !_both_pins_in_routing_block(driver_pin, driven_pin) &&
-            any_mux_edges) {
-            links_.emplace_back(link{driver_pin, driven_pin});
+            !_both_pins_in_routing_block(driver_pin, driven_pin)) {
+            if (any_mux_edges)
+                links_.emplace(Link{driver_pin, driven_pin});
             driven_pin = driver_pin;
+            any_mux_edges = false;
         }
 
         driver_id = driver->driver_pb_pin_id;
