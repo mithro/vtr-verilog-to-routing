@@ -19,10 +19,7 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
         struct link {
             const t_pb_graph_pin *source_;
             const t_pb_graph_pin *sink_;
-            const t_pb *pb_;
         };
-
-        typedef std::pair<const t_pb_graph_pin*, const t_pb*> t_pin_atom;
 
     public:
         ICE40HLCWriterVisitor(std::ostream& f);
@@ -36,12 +33,12 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
         void finish_impl() override;
 
     private:
-        void process_ports(const t_pb_route *top_pb_route, const t_pb* pb, const int num_ports,
+        void process_ports(const t_pb_route *top_pb_route, const int num_ports,
             const int *num_pins, const t_pb_graph_pin *const *pins);
         void process_route(const t_pb_route *top_pb_route, const t_pb_route *pb_route,
-            const t_pb_graph_pin *pin, const t_pb* pb);
+            const t_pb_graph_pin *pin);
         std::list<const t_pb_graph_pin*> collect_chain(const t_pb_graph_pin *tip, bool up);
-        bool write_cell_chains(int cell, const std::set<t_pin_atom> &pin_atoms, bool up);
+        bool write_cell_chains(int cell, const std::set<const t_pb_graph_pin*> &pin_atoms, bool up);
         void close_tile();
 
     private:

@@ -489,11 +489,11 @@ void ICE40HLCWriterVisitor::visit_all_impl(const t_pb_route *top_pb_route, const
     if (!pb)
         return;
 
-    process_ports(top_pb_route, pb, pb_graph_node->num_input_ports,
+    process_ports(top_pb_route, pb_graph_node->num_input_ports,
         pb_graph_node->num_input_pins, pb_graph_node->input_pins);
-    process_ports(top_pb_route, pb, pb_graph_node->num_clock_ports,
+    process_ports(top_pb_route, pb_graph_node->num_clock_ports,
         pb_graph_node->num_clock_pins, pb_graph_node->clock_pins);
-    process_ports(top_pb_route, pb, pb_graph_node->num_output_ports,
+    process_ports(top_pb_route, pb_graph_node->num_output_ports,
         pb_graph_node->num_output_pins, pb_graph_node->output_pins);
 }
 
@@ -503,20 +503,20 @@ void ICE40HLCWriterVisitor::finish_impl() {
 }
 
 void ICE40HLCWriterVisitor::process_ports(const t_pb_route *top_pb_route,
-    const t_pb* pb, const int num_ports, const int *num_pins, const t_pb_graph_pin *const *pins) {
+    const int num_ports, const int *num_pins, const t_pb_graph_pin *const *pins) {
     for (int port_index = 0; port_index < num_ports; ++port_index) {
         for (int pin_index = 0; pin_index < num_pins[port_index]; ++pin_index) {
             const t_pb_graph_pin *const pin = &pins[port_index][pin_index];
             const t_pb_route *const pb_route = &top_pb_route[pin->pin_count_in_cluster];
             if (pb_route->atom_net_id != AtomNetId::INVALID() &&
                 !_ignore_pin(pin))
-                process_route(top_pb_route, pb_route, pin, pb);
+                process_route(top_pb_route, pb_route, pin);
         }
     }
 }
 
 void ICE40HLCWriterVisitor::process_route(const t_pb_route *top_pb_route, const t_pb_route *pb_route,
-    const t_pb_graph_pin *pin, const t_pb* pb) {
+    const t_pb_graph_pin *pin) {
     using std::endl;
 
     // Iterate up the chain of drivers adding links as each non-ignored pin is encountered
@@ -534,7 +534,7 @@ void ICE40HLCWriterVisitor::process_route(const t_pb_route *top_pb_route, const 
         if (!_ignore_pin(driver_pin) &&
             !_both_pins_in_routing_block(driver_pin, driven_pin) &&
             any_mux_edges) {
-            links_.emplace_back(link{driver_pin, driven_pin, pb});
+            links_.emplace_back(link{driver_pin, driven_pin});
             driven_pin = driver_pin;
         }
 
@@ -571,16 +571,17 @@ std::list<const t_pb_graph_pin*> ICE40HLCWriterVisitor::collect_chain(
     return chain;
 }
 
-bool ICE40HLCWriterVisitor::write_cell_chains(int cell, const std::set<t_pin_atom> &pin_atoms, bool up) {
-    if (pin_atoms.empty())
+bool ICE40HLCWriterVisitor::write_cell_chains(int cell, const std::set<const t_pb_graph_pin*> &pins,
+    bool up) {
+    if (pins.empty())
         return false;
 
     auto &element_lines = (*elements_.insert(
         std::make_pair(std::to_string(cell), std::vector<std::string>())).first).second;
     bool found_chain = false;
-    for (const t_pin_atom &pa : pin_atoms) {
+    for (const t_pb_graph_pin *p : pins) {
         std::ostringstream ss2;
-        const auto chain = collect_chain(pa.first, up);
+        const auto chain = collect_chain(p, up);
         if (!chain.empty()) {
             _write_chain(ss2, chain, cell);
             element_lines.push_back(ss2.str());
@@ -599,16 +600,16 @@ void ICE40HLCWriterVisitor::close_tile() {
     set<int> input_cells, output_cells;
 
     // List the pins
-    set<t_pin_atom> pins;
+    set<const t_pb_graph_pin*> pins;
     for (const link &l : links_) {
-        pins.insert({l.source_, l.pb_});
-        pins.insert({l.sink_, l.pb_});
+        pins.insert(l.source_);
+        pins.insert(l.sink_);
     }
 
     // Find which cells are present
-    std::map<int, set<t_pin_atom>> cells;
-    for (const t_pin_atom &p : pins) {
-        const int cell = _find_cell_index(p.first->parent_node);
+    std::map<int, set<const t_pb_graph_pin*>> cells;
+    for (const t_pb_graph_pin *p : pins) {
+        const int cell = _find_cell_index(p->parent_node);
         if (cell != -1)
             cells[cell].insert(p);
     }
