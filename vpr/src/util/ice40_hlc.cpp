@@ -399,28 +399,31 @@ void ICE40HLCWriterVisitor::visit_top_impl(const char* top_level_name) {
 void ICE40HLCWriterVisitor::visit_atom_impl(const t_pb* atom) {
     const auto& atom_ctx = g_vpr_ctx.atom();
     const t_model *const model = atom_ctx.nlist.block_model(atom_ctx.lookup.pb_atom(atom));
-
-    if(model->name != std::string(MODEL_NAMES))
-        return;
-
-    // Write the LUT config
-    const int num_inputs = atom->pb_graph_node->total_input_pins();
-    const std::vector<int> permute = _determine_lut_permutation(num_inputs, atom);
-    const auto& truth_table = atom_ctx.nlist.block_truth_table(atom_ctx.lookup.pb_atom(atom));
-    const auto permuted_truth_table = permute_truth_table(truth_table, num_inputs, permute);
-    const auto mask = truth_table_to_lut_mask(permuted_truth_table, num_inputs);
-
     const int cell = _find_cell_index(atom->pb_graph_node);
-    std::ostringstream ss;
-    ss << cell;
-    auto &element_lines = (*elements_.insert(
-        std::make_pair(ss.str(), std::vector<std::string>())).first).second;
 
-    std::ostringstream ss2;
-    ss2 << "out = " << mask.size() << "'b";
-    for (const vtr::LogicValue &v : mask)
-        ss2 << ((v == vtr::LogicValue::TRUE) ? '1' : '0');
-    element_lines.push_back(ss2.str());
+    if (model->name == std::string(MODEL_NAMES)) {
+        // Write the LUT config
+        const int num_inputs = atom->pb_graph_node->total_input_pins();
+        const std::vector<int> permute = _determine_lut_permutation(num_inputs, atom);
+        const auto& truth_table = atom_ctx.nlist.block_truth_table(atom_ctx.lookup.pb_atom(atom));
+        const auto permuted_truth_table = permute_truth_table(truth_table, num_inputs, permute);
+        const auto mask = truth_table_to_lut_mask(permuted_truth_table, num_inputs);
+
+        auto &element_lines = (*elements_.insert(
+            std::make_pair(std::to_string(cell), std::vector<std::string>())).first).second;
+        std::ostringstream ss;
+        ss << "out = " << mask.size() << "'b";
+        for (const vtr::LogicValue &v : mask)
+            ss << ((v == vtr::LogicValue::TRUE) ? '1' : '0');
+        element_lines.push_back(ss.str());
+    }
+
+    const std::string model_sb_dff_prefix = "SB_DFF";
+    if (std::string(model->name).substr(0, model_sb_dff_prefix.size()) == model_sb_dff_prefix) {
+        auto &element_lines = (*elements_.insert(
+            std::make_pair(std::to_string(cell), std::vector<std::string>())).first).second;
+        element_lines.push_back("enable_dff");
+    }
 }
 
 void ICE40HLCWriterVisitor::visit_clb_impl(ClusterBlockId blk_id, const t_pb* clb) {
