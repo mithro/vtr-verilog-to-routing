@@ -222,6 +222,10 @@ static void _write_pin_name(std::ostream &o, const t_pb_graph_pin *pin) {
 }
 #endif
 
+static std::string _strip_io_prefix(const std::string n) {
+    return ((n[0] == 'i' || n[0] == 'o') && n[1] == '_') ? n.substr(2) : n;
+}
+
 static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int this_cell) {
     const int pb_index = _find_pb_index(pin->parent_node);
     const int cell = _find_cell_index(pin->parent_node);
@@ -247,12 +251,7 @@ static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int 
     // Only print the pin name for blocks that are not part of the internal tile routing
     if (t.type != BLK_TYPE || t.type_blk != BLK_XX_TYPE) {
         // Trim off the i_ or o_ direction prefix
-        const std::string n = pin->port->name;
-        if ((n[0] == 'i' || n[0] == 'o') && n[1] == '_')
-            o << n.substr(2);
-        else
-            o << n;
-
+        o << _strip_io_prefix(pin->port->name);
         if (pin->port->num_pins > 1)
             o << '_';
     }
