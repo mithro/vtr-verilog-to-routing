@@ -3,10 +3,22 @@
 
 #include <list>
 #include <map>
+#include <unordered_set>
 #include <string>
 #include <vector>
 
 #include "netlist_walker.h"
+
+struct Link {
+    const t_pb_graph_pin *source_;
+    const t_pb_graph_pin *sink_;
+};
+
+namespace std {
+template<> struct hash<Link> {
+    std::size_t operator()(const Link& l) const noexcept;
+};
+}
 
 class ICE40HLCWriterVisitor : public NetlistVisitor {
     public:
@@ -14,11 +26,6 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
             UNKNOWN,
             PLB,
             PIO
-        };
-
-        struct link {
-            const t_pb_graph_pin *source_;
-            const t_pb_graph_pin *sink_;
         };
 
     public:
@@ -47,8 +54,8 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
         const t_pb* cur_clb_;
         clb_type cur_clb_type_;
 
-        /// A list of source to sink links
-        std::vector<link> links_;
+        /// A list of source to sink Links
+        std::unordered_set<Link> links_;
 
         /// A dictionary of lines to include for the cell descriptions
         std::map<std::string, std::vector<std::string>> elements_;

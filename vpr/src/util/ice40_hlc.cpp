@@ -387,6 +387,19 @@ static std::vector<int> _determine_lut_permutation(size_t num_inputs, const t_pb
     return permute;
 }
 
+namespace std {
+
+std::size_t std::hash<Link>::operator()(const Link& l) const noexcept {
+    return (std::hash<const t_pb_graph_pin*>{}(l.source_) << 1) ^
+        std::hash<const t_pb_graph_pin*>{}(l.sink_);
+}
+
+}
+
+static bool operator==(const Link &a, const Link &b) {
+    return a.source_ == b.source_ && a.sink_ == b.sink_;
+}
+
 ICE40HLCWriterVisitor::ICE40HLCWriterVisitor(std::ostream& os)
         : os_(os)
         , cur_clb_(nullptr)
@@ -549,9 +562,9 @@ std::list<const t_pb_graph_pin*> ICE40HLCWriterVisitor::collect_chain(
     typedef std::list<t_p> t_chain;
 
     t_chain chain({tip});
-    std::vector<link>::iterator iter;
-    const auto from = up ? &link::sink_ : &link::source_;
-    const auto to = up ? &link::source_ : &link::sink_;
+    std::unordered_set<Link>::iterator iter;
+    const auto from = up ? &Link::sink_ : &Link::source_;
+    const auto to = up ? &Link::source_ : &Link::sink_;
     const auto push_head = up ? (void (t_chain::*)(const t_p&))&t_chain::push_front :
         (void (t_chain::*)(const t_p&))&t_chain::push_back;
 
@@ -601,7 +614,7 @@ void ICE40HLCWriterVisitor::close_tile() {
 
     // List the pins
     set<const t_pb_graph_pin*> pins;
-    for (const link &l : links_) {
+    for (const Link &l : links_) {
         pins.insert(l.source_);
         pins.insert(l.sink_);
     }
