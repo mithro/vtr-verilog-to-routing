@@ -242,7 +242,7 @@ static void _write_hlc_pin_name(std::ostream &o, const t_pb_graph_pin *pin, int 
     const t_block_type t = _get_type(pin->parent_node->pb_type->name);
 
     if (t.type == BEL_TYPE || t.type == PAD_TYPE) {
-        if (this_cell != cell) {
+        if (this_cell != cell || cell == -1) {
             const std::map<t_ptype, std::string> prefix = {{BEL_TYPE, "lutff"}, {PAD_TYPE, "io"}};
             o << prefix.at(t.type) << '_';
             if (cell >= 0)
@@ -667,6 +667,15 @@ void ICE40HLCWriterVisitor::close_tile() {
         for (const string &line : (*i).second)
             os_ << "        " << line << endl;
         os_ << "    }" << endl;
+    }
+
+    // Write any remaining tile-global routes
+    for (const Link &l : links_) {
+        os_ << "    ";
+        _write_hlc_pin_name(os_, l.source_, -1);
+        os_ << " -> ";
+        _write_hlc_pin_name(os_, l.sink_, -1);
+        os_ << std::endl;
     }
 
     os_ << '}' << std::endl;
