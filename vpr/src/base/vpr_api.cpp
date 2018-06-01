@@ -84,6 +84,8 @@ using namespace std;
 
 #include "log.h"
 
+#include "ice40_hlc.h"
+
 #if defined(TBB_INTERFACE_VERSION)
 # include <tbb/task_scheduler_init.h>
 
@@ -1100,6 +1102,13 @@ void vpr_analysis(t_vpr_setup& vpr_setup, const t_arch& Arch) {
         free_timing_graph(slacks);
 #endif
     }
+
+    std::string hlc_filename = atom_ctx.nlist.netlist_name() + ".hlc";
+    vtr::printf("Writing Implementation FASM: %s\n", hlc_filename.c_str());
+    std::ofstream hlc_os(hlc_filename);
+    ICE40HLCWriterVisitor visitor2(hlc_os);
+    NetlistWalker nl_walker2(visitor2);
+    nl_walker2.walk();
 }
 
 /* This function performs power estimation, and must be called
