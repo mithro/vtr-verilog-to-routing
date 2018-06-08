@@ -28,7 +28,8 @@ target_link_libraries(libvpr
                         libeasygl
                         libtatum
                         libargparse
-                        libpugixml)
+                        libpugixml
+			libhlc)
 
 #Create the executable
 add_executable(vpr ${EXEC_SOURCES})
