@@ -568,7 +568,7 @@ float calc_relaxed_criticality(const std::map<DomainPair, float>& domains_max_re
         VTR_ASSERT_MSG(iter != domains_worst_slack.end(), "Require the worst slack for clock domain pair");
         float worst_slack = iter->second;
 
-	vtr::printf("max_req: %f, worst_slack: %f\n", max_req, worst_slack);
+//	vtr::printf("max_req: %f, worst_slack: %f\n", max_req, worst_slack);
 
         if (worst_slack < 0.) {
             //We shift slacks and required time by the most negative slack
@@ -590,7 +590,7 @@ float calc_relaxed_criticality(const std::map<DomainPair, float>& domains_max_re
         float crit = 1. - (slack / max_req);
 
         //Soft check for reasonable criticality values
-	vtr::printf("crit: 0 <= %f <= 1.0 (+/- %f) - (slack: %f, max_req: %f)\n", crit, CRITICALITY_ROUND_OFF_TOLERANCE, slack, max_req);
+	//vtr::printf("crit: 0 <= %f <= 1.0 (+/- %f) - (slack: %f, max_req: %f)\n", crit, CRITICALITY_ROUND_OFF_TOLERANCE, slack, max_req);
         VTR_ASSERT_MSG(crit >= 0. - CRITICALITY_ROUND_OFF_TOLERANCE, "Criticality should never be negative");
         VTR_ASSERT_MSG(crit <= 1. + CRITICALITY_ROUND_OFF_TOLERANCE, "Criticality should never be greater than one");
 
