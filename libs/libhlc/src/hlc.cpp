@@ -123,8 +123,8 @@ std::ostream& t_hlc_cell::enable(std::string key, std::string value) {
     }
 }
 
-std::ostream& t_hlc_cell::enable_edge(std::string src, std::string dst, t_hlc_sw_type sw) {
-    t_hlc_edge new_edge(/* psrc.second */ src, /* pdst.second */ dst, sw);
+std::ostream& t_hlc_cell::enable_edge(std::string src, std::string dst, t_hlc_sw_type sw, std::string sym) {
+  t_hlc_edge new_edge(/* psrc.second */ src, /* pdst.second */ dst, sw, sym);
     std::cout << k.name << "_" << k.i << " (" << new_edge.src << "->" << new_edge.dst << ") ";
     auto found = std::find(edges.begin(), edges.end(), new_edge);
     if (found == edges.end()) {
@@ -172,7 +172,7 @@ std::ostream& t_hlc_tile::enable(std::string key, std::string value) {
     return cell->enable(pkey.second, value);
 }
 
-std::ostream& t_hlc_tile::enable_edge(std::string src, std::string dst, t_hlc_sw_type sw) {
+std::ostream& t_hlc_tile::enable_edge(std::string src, std::string dst, t_hlc_sw_type sw, std::string sym) {
     auto psrc = parse_net_name(src);
     auto pdst = parse_net_name(dst);
 
@@ -185,7 +185,7 @@ std::ostream& t_hlc_tile::enable_edge(std::string src, std::string dst, t_hlc_sw
 
     // FIXME: HLC parser barfs
     // -- https://github.com/cliffordwolf/icestorm/issues/145
-    return cell->enable_edge(/* psrc.second */ src, /* pdst.second */ dst, sw);
+    return cell->enable_edge(/* psrc.second */ src, /* pdst.second */ dst, sw, sym);
 }
 
 void print_indent(std::ostream& os, std::string indent, std::string str) {
@@ -222,6 +222,11 @@ void t_hlc_file::print_edges(std::ostream& os, std::string indent, std::list<t_h
                 print_indent(os, indent+"#", e.comments.str());
                 os << std::endl;
             }
+        }
+
+        os << indent << g.front().sym << " .sym> " << g.front().src << std::endl;
+        for (auto e : g) {
+          os << indent << e.sym << " .sym> " << e.dst << std::endl;
         }
 
         os << indent;

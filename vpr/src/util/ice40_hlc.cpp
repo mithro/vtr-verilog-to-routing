@@ -676,7 +676,7 @@ void ICE40HLCWriterVisitor::finish_impl() {
                 auto cell = tile->get_cell("io", block.z);
                 VTR_ASSERT(cell != nullptr);
                 std::string name = cluster_ctx.clb_nlist.port_bit_name(pin_id);
-                cell->enable_edge("GLOBAL_BUFFER_OUTPUT", glb_net_name, HLC_SW_BUFFER) << net_name;
+                cell->enable_edge("GLOBAL_BUFFER_OUTPUT", glb_net_name, HLC_SW_BUFFER, net_name) << net_name;
                 break;
             }
             for (auto pin_id : cluster_ctx.clb_nlist.net_pins(net_id)) {
@@ -698,7 +698,7 @@ void ICE40HLCWriterVisitor::finish_impl() {
                     auto cell = tile->get_global_cell();
                     VTR_ASSERT(cell != nullptr);
                     if (glb_net_name.size() > 0) {
-                        cell->enable_edge(glb_net_name, name, HLC_SW_BUFFER) << net_name;
+                      cell->enable_edge(glb_net_name, name, HLC_SW_BUFFER, net_name) << net_name;
                     }
                 }
                 std::cout << "-->Block " << cluster_ctx.clb_nlist.block_name(block_id).c_str() << " (#" << size_t(block_id) << ")";
@@ -800,7 +800,7 @@ void ICE40HLCWriterVisitor::finish_impl() {
                 auto snk_id = tptr->next->index;
                 auto& snk_node = device_ctx.rr_nodes[snk_id];
 
-                // HLC Positions
+                // HC Positions
                 auto hlcpos_edge = metadata_hlc_coord(src_node, snk_id, tptr->iswitch);
                 auto hlcpos_src = metadata_hlc_coord(src_node);
                 auto hlcpos_snk = metadata_hlc_coord(snk_node);
@@ -825,7 +825,7 @@ void ICE40HLCWriterVisitor::finish_impl() {
                 int y_offset = device_ctx.grid[grid_pos.first][grid_pos.second].height_offset;
                 tile->name = hlc_tile(type->pb_type, x_offset, y_offset);
 
-                auto& c = tile->enable_edge(src_pname->as_string(), snk_pname->as_string(), hlc_sw_type);
+                auto& c = tile->enable_edge(src_pname->as_string(), snk_pname->as_string(), hlc_sw_type, net_name);
                 if (verbose_) {
                     // Output a useful debugging about which rr_nodes this edge
                     // comes from.

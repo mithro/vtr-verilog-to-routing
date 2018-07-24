@@ -97,11 +97,12 @@ struct t_hlc_edge {
     std::string src;
     std::string dst;
     t_hlc_sw_type sw;
+    std::string sym;
     std::stringstream comments;
 
-    t_hlc_edge() : src(), dst(), sw(HLC_SW_NULL), comments() {}
-    t_hlc_edge(const t_hlc_edge& o) : src(o.src), dst(o.dst), sw(o.sw), comments(o.comments.str()) {}
-    t_hlc_edge(std::string nsrc, std::string ndst, t_hlc_sw_type nsw, std::string ncomments = "") : src(nsrc), dst(ndst), sw(nsw), comments(ncomments) {}
+    t_hlc_edge() : src(), dst(), sw(HLC_SW_NULL), sym(), comments() {}
+    t_hlc_edge(const t_hlc_edge& o) : src(o.src), dst(o.dst), sw(o.sw), sym(o.sym), comments(o.comments.str()) {}
+    t_hlc_edge(std::string nsrc, std::string ndst, t_hlc_sw_type nsw, std::string nsym, std::string ncomments = "") : src(nsrc), dst(ndst), sw(nsw), sym(nsym), comments(ncomments) {}
 
     bool operator==(const t_hlc_edge &o) const;
     bool operator!=(const t_hlc_edge &o) const;
@@ -188,7 +189,7 @@ struct t_hlc_cell {
 
     inline std::ostream& enable(std::string key) { return enable(key, ""); }
     std::ostream& enable(std::string key, std::string value);
-    std::ostream& enable_edge(std::string src, std::string dst, t_hlc_sw_type sw);
+    std::ostream& enable_edge(std::string src, std::string dst, t_hlc_sw_type sw, std::string sym);
 };
 
 namespace std {
@@ -222,7 +223,7 @@ struct t_hlc_tile {
 
     inline std::ostream& enable(std::string key) { return enable(key, ""); }
     std::ostream& enable(std::string key, std::string value);
-    std::ostream& enable_edge(std::string src, std::string dst, t_hlc_sw_type sw);
+    std::ostream& enable_edge(std::string src, std::string dst, t_hlc_sw_type sw, std::string sym);
 
  private:
     t_hlc_cell* get_cell(t_hlc_cell_key k);

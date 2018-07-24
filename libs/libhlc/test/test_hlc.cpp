@@ -31,11 +31,11 @@ TEST_CASE("coord_operator_eq", "[hlc]") {
 }
 
 TEST_CASE("edge_operator_eq", "[hlc]") {
-    t_hlc_edge e1("a", "b", HLC_SW_END);
-    t_hlc_edge e2("a", "b", HLC_SW_END);
-    t_hlc_edge e3("a", "b", HLC_SW_SHORT);
-    t_hlc_edge e4("a", "c", HLC_SW_END);
-    t_hlc_edge e5("c", "d", HLC_SW_END);
+    t_hlc_edge e1("a", "b", HLC_SW_END, "");
+    t_hlc_edge e2("a", "b", HLC_SW_END, "");
+    t_hlc_edge e3("a", "b", HLC_SW_SHORT, "");
+    t_hlc_edge e4("a", "c", HLC_SW_END, "");
+    t_hlc_edge e5("c", "d", HLC_SW_END, "");
 
     // Check the edges are equal when equal.
     REQUIRE(e1 == e1);
@@ -70,11 +70,11 @@ TEST_CASE("edge_operator_eq", "[hlc]") {
 }
 
 TEST_CASE("edge_operator_gt", "[hlc]") {
-    t_hlc_edge e1("a", "b", HLC_SW_SHORT);
-    t_hlc_edge e2("a", "b", HLC_SW_END);
-    t_hlc_edge e3("a", "b", HLC_SW_END);
-    t_hlc_edge e4("a", "c", HLC_SW_END);
-    t_hlc_edge e5("c", "d", HLC_SW_END);
+    t_hlc_edge e1("a", "b", HLC_SW_SHORT, "");
+    t_hlc_edge e2("a", "b", HLC_SW_END, "");
+    t_hlc_edge e3("a", "b", HLC_SW_END, "");
+    t_hlc_edge e4("a", "c", HLC_SW_END, "");
+    t_hlc_edge e5("c", "d", HLC_SW_END, "");
 
     // Check the edges are equal when equal.
     REQUIRE(!(e1 < e1));
@@ -109,12 +109,12 @@ TEST_CASE("edge_operator_gt", "[hlc]") {
 }
 
 TEST_CASE("edge_operator_hash", "[hlc]") {
-    t_hlc_edge e1("a", "b", HLC_SW_SHORT);
-    t_hlc_edge e2("a", "b", HLC_SW_END);
-    t_hlc_edge e3("a", "b", HLC_SW_END);
-    t_hlc_edge e4("a", "c", HLC_SW_END);
-    t_hlc_edge e5("c", "d", HLC_SW_END);
-    t_hlc_edge e6("a", "bb", HLC_SW_END);
+    t_hlc_edge e1("a", "b", HLC_SW_SHORT, "");
+    t_hlc_edge e2("a", "b", HLC_SW_END, "");
+    t_hlc_edge e3("a", "b", HLC_SW_END, "");
+    t_hlc_edge e4("a", "c", HLC_SW_END, "");
+    t_hlc_edge e5("c", "d", HLC_SW_END, "");
+    t_hlc_edge e6("a", "bb", HLC_SW_END, "");
 
     std::size_t h1 = std::hash<t_hlc_edge>{}(e1);
     std::size_t h2 = std::hash<t_hlc_edge>{}(e2);
@@ -411,21 +411,21 @@ TEST_CASE("test", "[hlc]") {
     //t1->type = HLC_TILE_LOGIC;
     t1->name = "logic_tile";
     // Path which goes from one cell to another via a local track.
-    t1->enable_edge("lutff_5/out", "local_g0_5", HLC_SW_BUFFER)
+    t1->enable_edge("lutff_5/out", "local_g0_5", HLC_SW_BUFFER, "")
         << " Edge comment 1";
-    t1->enable_edge("local_g0_5", "lutff_6/in_1", HLC_SW_BUFFER);
+    t1->enable_edge("local_g0_5", "lutff_6/in_1", HLC_SW_BUFFER, "");
 
     // Path which leaves the via two different span tracks.
-    t1->enable_edge("local_g0_5", "span12_y7_g14_0", HLC_SW_BUFFER)
+    t1->enable_edge("local_g0_5", "span12_y7_g14_0", HLC_SW_BUFFER, "")
         << " Edge comment 2";
-    t1->enable_edge("span12_y7_g14_0", "span12_x2_g12_0", HLC_SW_ROUTING)
+    t1->enable_edge("span12_y7_g14_0", "span12_x2_g12_0", HLC_SW_ROUTING, "")
         << " Edge comment 3a" << std::endl
         << " Edge comment 3b";
-    t1->enable_edge("span12_y7_g14_0", "span12_x3_g19_0", HLC_SW_ROUTING);
+    t1->enable_edge("span12_y7_g14_0", "span12_x3_g19_0", HLC_SW_ROUTING, "");
     // Enable an edge which already enabled..
-    t1->enable_edge("span12_y7_g14_0", "span12_x3_g19_0", HLC_SW_ROUTING);
+    t1->enable_edge("span12_y7_g14_0", "span12_x3_g19_0", HLC_SW_ROUTING, "");
     // Enable an edge which already enabled with another comment
-    t1->enable_edge("span12_y7_g14_0", "span12_x3_g19_0", HLC_SW_ROUTING)
+    t1->enable_edge("span12_y7_g14_0", "span12_x3_g19_0", HLC_SW_ROUTING, "")
         << " Edge comment 4";
 
     auto c15 = t1->get_cell("lutff_5");
@@ -438,8 +438,8 @@ TEST_CASE("test", "[hlc]") {
     t2->name = "io_tile";
     t2->comments << " Tile comment";
     t2->enable("io_0/disable_input");
-    t2->enable_edge("span4_right_g5_3", "local_g0_7", HLC_SW_BUFFER);
-    t2->enable_edge("local_g0_7", "io_1/D_OUT_0", HLC_SW_BUFFER);
+    t2->enable_edge("span4_right_g5_3", "local_g0_7", HLC_SW_BUFFER, "");
+    t2->enable_edge("local_g0_7", "io_1/D_OUT_0", HLC_SW_BUFFER, "");
     auto c21 = t2->get_cell("io", 1);
     c21->enable("enable_input");
 
