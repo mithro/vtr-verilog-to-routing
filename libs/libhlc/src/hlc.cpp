@@ -224,9 +224,11 @@ void t_hlc_file::print_edges(std::ostream& os, std::string indent, std::list<t_h
             }
         }
 
-        os << indent << g.front().sym << " .sym> " << g.front().src << std::endl;
-        for (auto e : g) {
-          os << indent << e.sym << " .sym> " << e.dst << std::endl;
+        if (g.front().sym.length() > 0) {
+          os << indent << g.front().src << " .sym> " << g.front().sym << std::endl;
+          for (auto e : g) {
+            os << indent << e.dst << " .sym> " << e.sym << std::endl;
+          }
         }
 
         os << indent;

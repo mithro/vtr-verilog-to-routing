@@ -676,7 +676,7 @@ void ICE40HLCWriterVisitor::finish_impl() {
                 auto cell = tile->get_cell("io", block.z);
                 VTR_ASSERT(cell != nullptr);
                 std::string name = cluster_ctx.clb_nlist.port_bit_name(pin_id);
-                cell->enable_edge("GLOBAL_BUFFER_OUTPUT", glb_net_name, HLC_SW_BUFFER, net_name) << net_name;
+                cell->enable_edge("GLOBAL_BUFFER_OUTPUT", glb_net_name, HLC_SW_BUFFER, "") << net_name;
                 break;
             }
             for (auto pin_id : cluster_ctx.clb_nlist.net_pins(net_id)) {
