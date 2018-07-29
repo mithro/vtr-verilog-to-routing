@@ -213,6 +213,8 @@ static void load_pin_class_by_depth(t_pb_graph_node *pb_graph_node,
 		const int depth, int *input_count, int *output_count) {
 	int i, j, k;
 
+    /* FIXME: This function fails on "route through" pb nodes. */
+
 	if (pb_graph_node->pb_type->num_modes == 0) {
 		if (pb_graph_node->pb_type->depth > depth) {
 			/* At primitive, determine which pin class each of its pins belong to */
@@ -499,7 +501,7 @@ static void sum_pin_class(t_pb_graph_node *pb_graph_node) {
 					pb_graph_node->input_pins[i][j].pin_class < pb_graph_node->num_input_pin_class);
 			if (pb_graph_node->input_pins[i][j].pin_class == OPEN) {
 				vtr::printf_warning(__FILE__, __LINE__,
-						"%s[%d].%s[%d] unconnected pin in architecture.\n",
+						"Input %s[%d].%s[%d] unconnected pin in architecture.\n",
 						pb_graph_node->pb_type->name,
 						pb_graph_node->placement_index,
 						pb_graph_node->input_pins[i][j].port->name,
@@ -515,7 +517,7 @@ static void sum_pin_class(t_pb_graph_node *pb_graph_node) {
 					pb_graph_node->output_pins[i][j].pin_class < pb_graph_node->num_output_pin_class);
 			if (pb_graph_node->output_pins[i][j].pin_class == OPEN) {
 				vtr::printf_warning(__FILE__, __LINE__,
-						"%s[%d].%s[%d] unconnected pin in architecture.\n",
+						"Output %s[%d].%s[%d] unconnected pin in architecture.\n",
 						pb_graph_node->pb_type->name,
 						pb_graph_node->placement_index,
 						pb_graph_node->output_pins[i][j].port->name,
@@ -531,7 +533,7 @@ static void sum_pin_class(t_pb_graph_node *pb_graph_node) {
 					pb_graph_node->clock_pins[i][j].pin_class < pb_graph_node->num_input_pin_class);
 			if (pb_graph_node->clock_pins[i][j].pin_class == OPEN) {
 				vtr::printf_warning(__FILE__, __LINE__,
-						"%s[%d].%s[%d] unconnected pin in architecture.\n",
+						"Clock %s[%d].%s[%d] unconnected pin in architecture.\n",
 						pb_graph_node->pb_type->name,
 						pb_graph_node->placement_index,
 						pb_graph_node->clock_pins[i][j].port->name,

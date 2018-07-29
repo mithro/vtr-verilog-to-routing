@@ -1298,6 +1298,7 @@ static enum e_block_pack_status try_pack_molecule(
 				reset_lookahead_pins_used(pb);
 				try_update_lookahead_pins_used(pb);
 				if (!check_lookahead_pins_used(pb, max_external_pin_util)) {
+                    vtr::printf("Failed check_lookahead_pins_used\n");
                     block_pack_status = BLK_FAILED_FEASIBLE;
 				}
 			}
@@ -1355,6 +1356,7 @@ static enum e_block_pack_status try_pack_molecule(
 				}
 			}
 		} else {
+            vtr::printf("Failed finding primitive (molecule size: %d)\n", molecule_size);
 			block_pack_status = BLK_FAILED_FEASIBLE;
 			break; /* no more candidate primitives available, this molecule will not pack, return fail */
 		}
@@ -1996,6 +1998,22 @@ static void start_new_cluster(
                                             enable_pin_feasibility_filter,
                                             FULL_EXTERNAL_PIN_UTIL);
 
+            const char* e;
+            switch(pack_result) {
+            case BLK_PASSED:
+                e = "passed";
+                break;
+            case BLK_FAILED_FEASIBLE:
+                e = "not feasible";
+                break;
+            case BLK_FAILED_ROUTE:
+                e = "not routable";
+                break;
+            case BLK_STATUS_UNDEFINED:
+                e = "???";
+                break;
+            }
+            vtr::printf("try_pack_molecule into mode %d %s\n", j, e);
             success = (pack_result == BLK_PASSED);
         }
 
@@ -2021,9 +2039,12 @@ static void start_new_cluster(
         if (molecule->type == MOLECULE_FORCED_PACK) {
             vpr_throw(VPR_ERROR_PACK, __FILE__, __LINE__,
                     "Can not find any logic block that can implement molecule.\n"
-                    "\tPattern %s %s\n",
+                    "\tPattern %s %s (is_chain: %s)\n"
+                    "\tChecked %d candidates.",
                     molecule->pack_pattern->name,
-                    root_atom_name.c_str());
+                    root_atom_name.c_str(),
+                    molecule->pack_pattern->is_chain ? "Yes" : "No",
+                    candidate_types.size());
         } else {
             vpr_throw(VPR_ERROR_PACK, __FILE__, __LINE__,
                     "Can not find any logic block that can implement molecule.\n"
@@ -2744,6 +2765,10 @@ static bool check_lookahead_pins_used(t_pb *cur_pb, t_ext_pin_util max_external_
                 class_size = std::max<size_t>(1, max_external_pin_util.input_pin_util * class_size);
             }
 
+            vtr::printf("check_lookahead_pins_used A %d %d\n",
+                    cur_pb->pb_stats->lookahead_input_pins_used[i].size(),
+                    class_size);
+            //VTR_ASSERT(class_size > 0);
 			if (cur_pb->pb_stats->lookahead_input_pins_used[i].size() > class_size) {
 				success = false;
 			}
@@ -2757,6 +2782,10 @@ static bool check_lookahead_pins_used(t_pb *cur_pb, t_ext_pin_util max_external_
                 class_size = std::max<size_t>(1, max_external_pin_util.output_pin_util * class_size);
             }
 
+            vtr::printf("check_lookahead_pins_used B %d %d\n",
+                    cur_pb->pb_stats->lookahead_input_pins_used[i].size(),
+                    class_size);
+            //VTR_ASSERT(class_size > 0);
 			if (cur_pb->pb_stats->lookahead_output_pins_used[i].size() > class_size) {
 				success = false;
 			}

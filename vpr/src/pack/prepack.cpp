@@ -438,7 +438,7 @@ static void forward_expand_pack_pattern_from_edge(
 		const int curr_pattern_index, int *L_num_blocks, bool make_root_of_chain) {
 	int i, j, k;
 	int iport, ipin, iedge;
-	bool found; /* Error checking, ensure only one fan-out for each pattern net */
+	bool found, multiple; /* Error checking, ensure only one fan-out for each pattern net */
 	t_pack_pattern_block *destination_block = nullptr;
 	t_pb_graph_node *destination_pb_graph_node = nullptr;
 
@@ -453,6 +453,7 @@ static void forward_expand_pack_pattern_from_edge(
 	}
 
 	found = false;
+    multiple = false;
 	for (i = 0; i < expansion_edge->num_output_pins; i++) {
 		if (expansion_edge->output_pins[i]->parent_node->pb_type->num_modes == 0) {
 			destination_pb_graph_node = expansion_edge->output_pins[i]->parent_node;
@@ -526,14 +527,16 @@ static void forward_expand_pack_pattern_from_edge(
 					for (k = 0; k < expansion_edge->output_pins[i]->output_edges[j]->num_pack_patterns; k++) {
 						if (expansion_edge->output_pins[i]->output_edges[j]->pack_pattern_indices[k] == curr_pattern_index) {
 							if (found == true) {
+                                multiple = true;
 								/* Check assumption that each forced net has only one fan-out */
-								vpr_throw(VPR_ERROR_PACK, __FILE__, __LINE__,
+                                vtr::printf_warning(__FILE__, __LINE__,
 										"Invalid packing pattern defined.  Multi-fanout nets not supported when specifying pack patterns.\n"
 										"Problem on %s[%d].%s[%d] for pattern %s\n",
 										expansion_edge->output_pins[i]->parent_node->pb_type->name,
 										expansion_edge->output_pins[i]->parent_node->placement_index,
 										expansion_edge->output_pins[i]->port->name,
 										expansion_edge->output_pins[i]->pin_number,
+                                        expansion_edge->output_pins[i]->output_edges[j],
                                         list_of_packing_patterns[curr_pattern_index].name);
 							}
 							found = true;
@@ -547,6 +550,10 @@ static void forward_expand_pack_pattern_from_edge(
 			}
 		}
 	}
+    if (multiple) {
+        vpr_throw(VPR_ERROR_PACK, __FILE__, __LINE__,
+			"Invalid packing pattern defined.  Multi-fanout nets not supported when specifying pack patterns.\n");
+    }
 
 }
 
@@ -1072,8 +1079,9 @@ static void print_pack_molecules(const char *fname,
 			fprintf(fp, "\tpattern index %d: atom block %s\n", i,
 					atom_ctx.nlist.block_name(list_of_molecules_current->atom_block_ids[0]).c_str());
 		} else if (list_of_molecules_current->type == MOLECULE_FORCED_PACK) {
-			fprintf(fp, "\nmolecule type: %s\n",
-					list_of_molecules_current->pack_pattern->name);
+			fprintf(fp, "\nmolecule type: %s (is_chain: %s)\n",
+					list_of_molecules_current->pack_pattern->name,
+					list_of_molecules_current->pack_pattern->is_chain ? "yes": "no");
 			for (i = 0; i < list_of_molecules_current->pack_pattern->num_blocks;
 					i++) {
 				if(!list_of_molecules_current->atom_block_ids[i]) {
