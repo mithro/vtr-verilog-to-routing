@@ -760,6 +760,8 @@ struct t_interconnect {
 	t_mode *parent_mode;
 
 	t_interconnect_power *interconnect_power;
+
+	t_metadata_dict *meta = nullptr;
 };
 
 /** Describes I/O and clock ports

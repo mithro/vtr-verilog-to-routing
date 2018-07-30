@@ -1568,6 +1568,8 @@ static void ProcessInterconnect(pugi::xml_node Parent, t_mode * mode, const pugi
 			mode->interconnect[i].interconnect_power->port_info_initialized =
 					false;
 
+            mode->interconnect[i].meta = ProcessMetadata(Cur, loc_data);
+
 			/* get next iteration */
 			Cur = Cur.next_sibling(Cur.name());
 			i++;
