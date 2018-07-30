@@ -416,10 +416,12 @@ void ICE40HLCWriterVisitor::visit_top_impl(const char* top_level_name) {
 }
 
 void ICE40HLCWriterVisitor::set_cell(std::string name, int index) {
+    std::cout << "set_cell(" << name << ", " << index << ")\n";
     current_cell_ = current_tile_->get_cell(name, index);
 }
 
 void ICE40HLCWriterVisitor::set_tile(t_hlc_coord pos, std::string name) {
+    std::cout << "set_tile(" << pos.x << "," << pos.y << ", " << name << ")\n";
     current_tile_ = output_.get_tile(pos);
     if (name.size() > 0) {
         current_tile_->name = name;
@@ -519,9 +521,49 @@ void ICE40HLCWriterVisitor::visit_all_impl(const t_pb_route *top_pb_route, const
         return;
     }
 
+    if (pb_type->meta != nullptr) {
+        if (pb_type->meta->has("hlc_cell")) {
+            std::string cell_name = pb_type->meta->get("hlc_cell")->front().as_string();
+            set_cell(cell_name, get_index(pb));
+        }
+
+        if (pb_type->meta->has("hlc_property")) {
+            for (auto v : *(pb_type->meta->get("hlc_property"))) {
+                if (current_cell_) {
+                    current_cell_->enable(v.as_string());
+                } else if (current_tile_) {
+                    current_tile_->enable(v.as_string());
+                } else {
+                    VTR_ASSERT(false);
+                    std::cout << "ERROR: No current cell!" << std::endl;
+                    return;
+                }
+            }
+        }
+    }
+
     if (pb != nullptr) {
         if (pb->has_modes()) {
             auto mode = pb->get_mode();
+            if (mode->meta != nullptr) {
+                if (mode->meta->has("hlc_cell")) {
+                    std::string cell_name = mode->meta->get("hlc_cell")->front().as_string();
+                    set_cell(cell_name, get_index(pb));
+                }
+                if (mode->meta->has("hlc_property")) {
+                    for (auto v : *(mode->meta->get("hlc_property"))) {
+                        if (current_cell_) {
+                            current_cell_->enable(v.as_string());
+                        } else if (current_tile_) {
+                            current_tile_->enable(v.as_string());
+                        } else {
+                            VTR_ASSERT(false);
+                            std::cout << "ERROR: No current cell!" << std::endl;
+                            return;
+                        }
+                    }
+                }
+            }
             /** Hack for "route through" LUTs */
             if (std::string(mode->name) == std::string("wire")) {
                 const int num_inputs = pb_graph_node->total_input_pins();
@@ -541,37 +583,6 @@ void ICE40HLCWriterVisitor::visit_all_impl(const t_pb_route *top_pb_route, const
                 trace << " route_through " << route.pb_graph_pin->port->name << " " << route.pb_graph_pin->pin_number << " of " << num_inputs << std::endl;
             }
 
-            if (mode->meta != nullptr) {
-                if (mode->meta->has("hlc_property")) {
-                    for (auto v : *(mode->meta->get("hlc_property"))) {
-                        if (current_cell_ == NULL) {
-                            std::cout << "No cell with mode " << std::string(mode->name) << std::endl;
-                            continue;
-                        }
-                        current_cell_->enable(v.as_string());
-                    }
-                }
-            }
-        }
-    }
-
-    if (pb_type->meta != nullptr) {
-        if (pb_type->meta->has("hlc_cell")) {
-            std::string cell_name = pb_type->meta->get("hlc_cell")->front().as_string();
-            set_cell(cell_name, get_index(pb));
-        }
-
-        if (pb_type->meta->has("hlc_property")) {
-            for (auto v : *(pb_type->meta->get("hlc_property"))) {
-                if (current_cell_) {
-                    current_cell_->enable(v.as_string());
-                } else if (current_tile_) {
-                    current_tile_->enable(v.as_string());
-                } else {
-                    std::cout << "ERROR: No current cell!" << std::endl;
-                    return;
-                }
-            }
         }
     }
 
