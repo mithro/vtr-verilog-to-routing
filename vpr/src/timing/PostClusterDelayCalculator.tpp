@@ -330,7 +330,7 @@ inline tatum::Time PostClusterDelayCalculator::atom_net_delay(const tatum::Timin
 #endif
     }
 
-    VTR_ASSERT(!std::isnan(edge_delay.value()));
+    //VTR_ASSERT(!std::isnan(edge_delay.value()));
 
     return edge_delay;
 }

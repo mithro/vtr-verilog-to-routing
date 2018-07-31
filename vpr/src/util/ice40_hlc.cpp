@@ -488,6 +488,62 @@ static const t_pb_graph_pin* is_node_clocked(const t_pb_route *top_pb_route, con
     return nullptr;
 }
 
+static const t_pb_graph_pin* is_interconnect_used(const t_pb_route *top_pb_route, const t_pb_graph_node* pb_graph_node, t_interconnect* inter) {
+    // Output pins
+    for(int port_index = 0; port_index < pb_graph_node->num_output_ports; ++port_index) {
+        for(int pin_index = 0; pin_index < pb_graph_node->num_output_pins[port_index]; ++pin_index) {
+            auto pin = &pb_graph_node->output_pins[port_index][pin_index];
+            if (top_pb_route[pin->pin_count_in_cluster].atom_net_id != AtomNetId::INVALID()) {
+                for(int oedge = 0; oedge < pin->num_output_edges; oedge++) {
+                    if (pin->output_edges[oedge]->interconnect == inter) {
+                        return pin;
+                    }
+                }
+            }
+        }
+    }
+    // Input pins
+    for(int port_index = 0; port_index < pb_graph_node->num_input_ports; ++port_index) {
+        for(int pin_index = 0; pin_index < pb_graph_node->num_input_pins[port_index]; ++pin_index) {
+            auto pin = &pb_graph_node->input_pins[port_index][pin_index];
+            if (top_pb_route[pin->pin_count_in_cluster].atom_net_id != AtomNetId::INVALID()) {
+                for(int oedge = 0; oedge < pin->num_output_edges; oedge++) {
+                    if (pin->output_edges[oedge]->interconnect == inter) {
+                        std::cout << "driver_set:" << pin->output_edges[oedge]->driver_set << "driver_pin:" << pin->output_edges[oedge]->driver_pin << std::endl;
+                        return pin;
+                    }
+                }
+            }
+        }
+    }
+    // Clock pins
+    for(int port_index = 0; port_index < pb_graph_node->num_clock_ports; ++port_index) {
+        for(int pin_index = 0; pin_index < pb_graph_node->num_clock_pins[port_index]; ++pin_index) {
+            auto pin = &pb_graph_node->clock_pins[port_index][pin_index];
+            if (top_pb_route[pin->pin_count_in_cluster].atom_net_id != AtomNetId::INVALID()) {
+                for(int oedge = 0; oedge < pin->num_output_edges; oedge++) {
+                    if (pin->output_edges[oedge]->interconnect == inter) {
+                        std::cout << "driver_set:" << pin->output_edges[oedge]->driver_set << "driver_pin:" << pin->output_edges[oedge]->driver_pin << std::endl;
+                        return pin;
+                    }
+                }
+            }
+        }
+    }
+    // Children
+	for (int i = 0; i < pb_graph_node->pb_type->num_modes; i++) {
+		for (int j = 0; j < pb_graph_node->pb_type->modes[i].num_pb_type_children; j++) {
+			for (int k = 0; k < pb_graph_node->pb_type->modes[i].pb_type_children[j].num_pb; k++) {
+                auto child_pin = is_interconnect_used(top_pb_route, &pb_graph_node->child_pb_graph_nodes[i][j][k], inter);
+                if (child_pin != nullptr) {
+                    return child_pin;
+                }
+			}
+		}
+	}
+    return nullptr;
+}
+
 static std::string lut_outputs(const AtomNetlist::TruthTable& truth_table, const std::vector<int> permute, size_t num_inputs) {
     const auto unpermuted_truth_table = permute_truth_table(truth_table, num_inputs, {0, 1, 2, 3});
     const auto permuted_truth_table = permute_truth_table(truth_table, num_inputs, permute);
@@ -590,6 +646,42 @@ void ICE40HLCWriterVisitor::visit_all_impl(const t_pb_route *top_pb_route, const
         auto& route = top_pb_route[clk_pin->pin_count_in_cluster];
         // netlist_id
         std::cout << "clock_pin " << route.pb_graph_pin->port->name << " " << route.pb_graph_pin->pin_number << std::endl;
+    }
+
+    for (int i = 0; i < pb_type->num_modes; i++) {
+        for (int j = 0; j < pb_type->modes[i].num_interconnect; j++) {
+            t_interconnect* interconnect = &(pb_type->modes[i].interconnect[j]);
+            std::cout << "Interconnect:" << interconnect->name << " ";
+            auto p = is_interconnect_used(top_pb_route, pb_graph_node, interconnect);
+            if (p != nullptr) {
+                std::cout << "USED! <<<<<" << (size_t)top_pb_route[p->pin_count_in_cluster].atom_net_id << "\n";
+                if (interconnect->meta != nullptr) {
+                    if (interconnect->meta->has("hlc_cell")) {
+                        std::string cell_name = interconnect->meta->get("hlc_cell")->front().as_string();
+                        set_cell(cell_name, get_index(pb));
+                    }
+
+                    if (interconnect->meta->has("hlc_property")) {
+                        for (auto v : *(interconnect->meta->get("hlc_property"))) {
+                            if (current_cell_) {
+                                std::cout << "current_cell" << " " << v.as_string() << std::endl;
+                                current_cell_->enable(v.as_string());
+                            } else if (current_tile_) {
+                                std::cout << "current_tile " << current_tile_->name << " " << v.as_string() << std::endl;
+                                current_tile_->enable(v.as_string());
+                            } else {
+                                VTR_ASSERT(false);
+                                std::cout << "ERROR: No current cell!" << std::endl;
+                                return;
+                            }
+                        }
+                    }
+                }
+            } else {
+                std::cout << "unused!\n";
+            }
+            std::cout << std::endl;
+        }
     }
 }
 

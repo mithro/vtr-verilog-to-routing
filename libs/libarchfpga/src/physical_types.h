@@ -949,7 +949,7 @@ struct t_pb_graph_node {
     //Returns the number of pins on this graph node
     //  Note this is the total for all ports on this node exluding any children (i.e. sum of all num_input_pins, num_output_pins, num_clock_pins)
     int num_pins() const {
-	return total_input_pins() + total_output_pins() + total_clock_pins();
+        return total_input_pins() + total_output_pins() + total_clock_pins();
     }
 };
 
@@ -996,7 +996,7 @@ struct t_pb_graph_pin {
 	float thld = std::numeric_limits<float>::quiet_NaN(); /* For sequential logic elements the hold time */
 	float tco_min = std::numeric_limits<float>::quiet_NaN(); /* For sequential logic elements the minimum clock to output time */
 	float tco_max = std::numeric_limits<float>::quiet_NaN(); /* For sequential logic elements the maximum clock to output time */
-    t_pb_graph_pin* associated_clock_pin = nullptr; /* For sequentail elements, the associated clock */
+    t_pb_graph_pin* associated_clock_pin = nullptr; /* For sequential elements, the associated clock */
 
 	/* combinational timing information */
 	int num_pin_timing = 0; /* Number of ipin to opin timing edges*/
