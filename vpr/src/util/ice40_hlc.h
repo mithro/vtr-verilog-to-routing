@@ -34,6 +34,9 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
         void set_tile(t_hlc_coord pos, std::string name);
         void set_cell(std::string name, int index);
 
+        void output_metadata(const t_pb* pb, t_metadata_dict* meta);
+        void output_metadata(const t_pb* pb, t_offset offset, t_metadata_dict* meta);
+
     private:
         std::ostream& os_;
 
@@ -41,6 +44,8 @@ class ICE40HLCWriterVisitor : public NetlistVisitor {
         t_hlc_file output_;
         t_hlc_tile* current_tile_;
         t_hlc_cell* current_cell_;
+
+        IntraLbPbPinLookup intra_lb_pb_pin_lookup_;
 };
 
 #endif

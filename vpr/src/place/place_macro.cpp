@@ -134,8 +134,8 @@ static void find_all_the_macro (int * num_of_macro, std::vector<ClusterBlockId> 
 							next_blk_id = cluster_ctx.clb_nlist.net_pin_block(curr_net_id, 1);
 
 							// Assume that the from_iblk_pin index is the same for the next block
-							VTR_ASSERT(f_idirect_from_blk_pin[cluster_ctx.clb_nlist.block_type(next_blk_id)->index][from_iblk_pin] == from_idirect
-									&& f_direct_type_from_blk_pin[cluster_ctx.clb_nlist.block_type(next_blk_id)->index][from_iblk_pin] == SOURCE);
+							VTR_ASSERT(f_idirect_from_blk_pin[cluster_ctx.clb_nlist.block_type(next_blk_id)->index][from_iblk_pin] == from_idirect);
+							VTR_ASSERT(f_direct_type_from_blk_pin[cluster_ctx.clb_nlist.block_type(next_blk_id)->index][from_iblk_pin] == SOURCE);
 							next_net_id = cluster_ctx.clb_nlist.block_net(next_blk_id, from_iblk_pin);
 
 							// Mark down this block as a member of the macro

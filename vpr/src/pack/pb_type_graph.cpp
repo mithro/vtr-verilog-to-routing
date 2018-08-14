@@ -683,8 +683,11 @@ t_pb_graph_pin *** alloc_and_load_port_pin_ptrs_from_string(const int line_num,
 				vpr_throw(VPR_ERROR_ARCH, get_arch_file_name(), line_num,
 					"Syntax error processing port string '%s' (%s)\n", port_string, e.what());
             }
+            if (!success) {
+				vpr_throw(VPR_ERROR_ARCH, get_arch_file_name(), line_num,
+					"Syntax error processing port string '%s'\n", port_string);
+            }
             VTR_ASSERT(success);
-
 			if (!in_squig_bracket) {
 				curr_set++;
 			}
