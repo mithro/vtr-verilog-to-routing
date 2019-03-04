@@ -44,3 +44,23 @@ if (VPR_USE_SIGNAL_HANDLER)
 endif()
 
 install(TARGETS vpr libvpr DESTINATION bin)
+
+#
+# Use clang-format-5.0 for code format
+#
+add_custom_target(format-cpp
+    COMMAND find ${PROJECT_SOURCE_DIR}
+        -name '*.cpp' -print0 -o -name '*.h' -print0
+        -o -name '*.tpp' -print0 -o -name '*.hpp' -print0 |
+        xargs -0 -P `nproc` clang-format-5.0 -style=file -i)
+
+#
+# Use simple python script for fixing C like boxed comments
+#
+add_custom_target(format-cpp-reflow-comments DEPENDS format-cpp
+    COMMAND find ${PROJECT_SOURCE_DIR}
+        -name '*.cpp' -print -o -name '*.h' -print
+        -o -name '*.tpp' -print -o -name '*.hpp' -print |
+        xargs -L 1 -P `nproc` python3 ${PROJECT_SOURCE_DIR}/scripts/reflow.py --inplace --input)
+
+add_custom_target(format DEPENDS format-cpp-reflow-comments)
