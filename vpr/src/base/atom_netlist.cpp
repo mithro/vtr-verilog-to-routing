@@ -9,7 +9,6 @@
 #include "vtr_log.h"
 #include "vpr_error.h"
 
-
 /*
  *
  *
@@ -25,17 +24,15 @@ AtomNetlist::AtomNetlist(std::string name, std::string id)
  * Blocks
  *
  */
-AtomBlockType AtomNetlist::block_type (const AtomBlockId id) const {
+AtomBlockType AtomNetlist::block_type(const AtomBlockId id) const {
     const t_model* blk_model = block_model(id);
 
     AtomBlockType type = AtomBlockType::BLOCK;
     if (blk_model->name == std::string(MODEL_INPUT)) {
         type = AtomBlockType::INPAD;
-    }
-    else if (blk_model->name == std::string(MODEL_OUTPUT)) {
+    } else if (blk_model->name == std::string(MODEL_OUTPUT)) {
         type = AtomBlockType::OUTPAD;
-    }
-    else {
+    } else {
         type = AtomBlockType::BLOCK;
     }
     return type;
@@ -47,7 +44,7 @@ const t_model* AtomNetlist::block_model(const AtomBlockId id) const {
     return block_models_[id];
 }
 
-const AtomNetlist::TruthTable& AtomNetlist::block_truth_table (const AtomBlockId id) const {
+const AtomNetlist::TruthTable& AtomNetlist::block_truth_table(const AtomBlockId id) const {
     VTR_ASSERT_SAFE(valid_block_id(id));
 
     return block_truth_tables_[id];
@@ -65,19 +62,18 @@ const t_model_ports* AtomNetlist::port_model(const AtomPortId id) const {
 }
 
 /*
-*
-* Lookups
-*
-*/
+ *
+ * Lookups
+ *
+ */
 AtomPortId AtomNetlist::find_atom_port(const AtomBlockId blk_id, const t_model_ports* model_port) const {
     VTR_ASSERT_SAFE(valid_block_id(blk_id));
     VTR_ASSERT_SAFE(model_port);
 
     //We can tell from the model port the set of ports
     //the port can be found in
-    port_range range = (model_port->dir == IN_PORT) ?
-        (model_port->is_clock) ? block_clock_ports(blk_id) : block_input_ports(blk_id)
-        : (block_output_ports(blk_id));
+    port_range range = (model_port->dir == IN_PORT) ? (model_port->is_clock) ? block_clock_ports(blk_id) : block_input_ports(blk_id)
+                                                    : (block_output_ports(blk_id));
 
     for (auto port_id : range) {
         if (port_name(port_id) == model_port->name) {
@@ -191,17 +187,17 @@ void AtomNetlist::remove_net_impl(const AtomNetId /*net_id*/) {
 }
 
 void AtomNetlist::rebuild_block_refs_impl(const vtr::vector_map<AtomPinId, AtomPinId>& /*pin_id_map*/,
-                                          const vtr::vector_map<AtomPortId, AtomPortId>& /*port_id_map*/) {
+    const vtr::vector_map<AtomPortId, AtomPortId>& /*port_id_map*/) {
     //Unused
 }
 
 void AtomNetlist::rebuild_port_refs_impl(const vtr::vector_map<AtomBlockId, AtomBlockId>& /*block_id_map*/,
-                                         const vtr::vector_map<AtomPinId, AtomPinId>& /*pin_id_map*/) {
+    const vtr::vector_map<AtomPinId, AtomPinId>& /*pin_id_map*/) {
     //Unused
 }
 
 void AtomNetlist::rebuild_pin_refs_impl(const vtr::vector_map<AtomPortId, AtomPortId>& /*port_id_map*/,
-                                        const vtr::vector_map<AtomNetId, AtomNetId>& /*net_id_map*/) {
+    const vtr::vector_map<AtomNetId, AtomNetId>& /*net_id_map*/) {
     //Unused
 }
 
@@ -209,18 +205,18 @@ void AtomNetlist::rebuild_net_refs_impl(const vtr::vector_map<AtomPinId, AtomPin
     //Unused
 }
 /*
-*
-* Internal utilities
-*
-*/
+ *
+ * Internal utilities
+ *
+ */
 
-void AtomNetlist::clean_blocks_impl(const vtr::vector_map<AtomBlockId,AtomBlockId>& block_id_map) {
+void AtomNetlist::clean_blocks_impl(const vtr::vector_map<AtomBlockId, AtomBlockId>& block_id_map) {
     //Update all the block_models and block
     block_models_ = clean_and_reorder_values(block_models_, block_id_map);
     block_truth_tables_ = clean_and_reorder_values(block_truth_tables_, block_id_map);
 }
 
-void AtomNetlist::clean_ports_impl(const vtr::vector_map<AtomPortId,AtomPortId>& port_id_map) {
+void AtomNetlist::clean_ports_impl(const vtr::vector_map<AtomPortId, AtomPortId>& port_id_map) {
     //Update all port_models_ values
     port_models_ = clean_and_reorder_values(port_models_, port_id_map);
 }

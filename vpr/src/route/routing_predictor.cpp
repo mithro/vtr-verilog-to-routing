@@ -8,11 +8,10 @@
 #include "routing_predictor.h"
 
 class LinearModel {
-public:
-
+  public:
     LinearModel(float slope = std::numeric_limits<float>::quiet_NaN(), float y_intercept = std::numeric_limits<float>::quiet_NaN())
-    : slope_(slope)
-    , y_intercept_(y_intercept) {
+        : slope_(slope)
+        , y_intercept_(y_intercept) {
     }
 
     float find_x_for_y_value(float y_value) const {
@@ -31,8 +30,7 @@ public:
         return slope_ * x_value + y_intercept_;
     }
 
-private:
-
+  private:
     float slope_;
     float y_intercept_;
 };
@@ -66,7 +64,6 @@ float covariance(std::vector<size_t> x_values, std::vector<float> y_values, floa
 }
 
 float RoutingPredictor::get_slope() {
-
     if (iterations_.size() > min_history_) {
         auto model = fit_model(iterations_, iteration_overused_rr_node_counts_, history_factor_);
         return model.get_slope();
@@ -156,9 +153,6 @@ LinearModel fit_model(std::vector<size_t> iterations, std::vector<size_t> overus
     return simple_linear_regression(hist_iters, hist_log_overuse);
 }
 
-
-
-
 RoutingPredictor::RoutingPredictor(size_t min_history, float history_factor)
     : min_history_(min_history)
     , history_factor_(history_factor) {
@@ -172,7 +166,7 @@ float RoutingPredictor::estimate_success_iteration() {
         auto model = fit_model(iterations_, iteration_overused_rr_node_counts_, history_factor_);
         success_iteration = model.find_x_for_y_value(0.);
 
-        if(success_iteration < 0.) {
+        if (success_iteration < 0.) {
             //Iterations less than zero occurs when the slope is positive,
             //and the intercept is before the y-axis
             success_iteration = std::numeric_limits<float>::infinity();
@@ -186,11 +180,11 @@ float RoutingPredictor::estimate_overuse_slope() {
     //We use a fixed size sliding window of history to estimate the slope
     //This makes the slope estimate more 'recent' than the values used to estimate
     //the success iteration (although at the risk of being noisier).
-    constexpr float FIXED_HISTORY_SIZE = 5; //# of previous iterations to consider
+    constexpr float FIXED_HISTORY_SIZE = 5;  //# of previous iterations to consider
 
     float slope = std::numeric_limits<float>::quiet_NaN();
 
-    float history_factor = FIXED_HISTORY_SIZE / iterations_.size(); //Fixed history size
+    float history_factor = FIXED_HISTORY_SIZE / iterations_.size();  //Fixed history size
 
     if (iterations_.size() >= FIXED_HISTORY_SIZE) {
         auto model = fit_model(iterations_, iteration_overused_rr_node_counts_, history_factor);

@@ -15,11 +15,12 @@ void report_packing_pin_usage(std::ostream& os, const VprContext& ctx) {
     auto& cluster_ctx = ctx.clustering();
     auto& device_ctx = ctx.device();
 
-    std::map<t_type_ptr,size_t> total_input_pins;
-    std::map<t_type_ptr,size_t> total_output_pins;
+    std::map<t_type_ptr, size_t> total_input_pins;
+    std::map<t_type_ptr, size_t> total_output_pins;
     for (int itype = 0; itype < device_ctx.num_block_types; ++itype) {
         t_type_ptr type = &device_ctx.block_types[itype];
-        if (is_empty_type(type)) continue;
+        if (is_empty_type(type))
+            continue;
 
         t_pb_type* pb_type = type->pb_type;
 
@@ -27,8 +28,8 @@ void report_packing_pin_usage(std::ostream& os, const VprContext& ctx) {
         total_output_pins[type] = pb_type->num_output_pins;
     }
 
-    std::map<t_type_ptr,std::vector<float>> inputs_used;
-    std::map<t_type_ptr,std::vector<float>> outputs_used;
+    std::map<t_type_ptr, std::vector<float>> inputs_used;
+    std::map<t_type_ptr, std::vector<float>> outputs_used;
 
     for (auto blk : cluster_ctx.clb_nlist.blocks()) {
         t_type_ptr type = cluster_ctx.clb_nlist.block_type(blk);
@@ -43,8 +44,10 @@ void report_packing_pin_usage(std::ostream& os, const VprContext& ctx) {
 
     for (int itype = 0; itype < device_ctx.num_block_types; ++itype) {
         t_type_ptr type = &device_ctx.block_types[itype];
-        if (is_empty_type(type)) continue;
-        if (!inputs_used.count(type)) continue;
+        if (is_empty_type(type))
+            continue;
+        if (!inputs_used.count(type))
+            continue;
 
         float max_inputs = *std::max_element(inputs_used[type].begin(), inputs_used[type].end());
         float min_inputs = *std::min_element(inputs_used[type].begin(), inputs_used[type].end());
@@ -57,9 +60,12 @@ void report_packing_pin_usage(std::ostream& os, const VprContext& ctx) {
         os << "Type: " << type->name << "\n";
 
         os << "\tInput Pin Usage:\n";
-        os << "\t\tMax: " << max_inputs << " (" << max_inputs / float(total_input_pins[type]) << ")" << "\n";
-        os << "\t\tAvg: " << avg_inputs << " (" << avg_inputs / float(total_input_pins[type]) << ")" << "\n";
-        os << "\t\tMin: " << min_inputs << " (" << min_inputs / float(total_input_pins[type]) << ")" << "\n";
+        os << "\t\tMax: " << max_inputs << " (" << max_inputs / float(total_input_pins[type]) << ")"
+           << "\n";
+        os << "\t\tAvg: " << avg_inputs << " (" << avg_inputs / float(total_input_pins[type]) << ")"
+           << "\n";
+        os << "\t\tMin: " << min_inputs << " (" << min_inputs / float(total_input_pins[type]) << ")"
+           << "\n";
 
         if (total_input_pins[type] != 0) {
             os << "\t\tHistogram:\n";
@@ -70,9 +76,12 @@ void report_packing_pin_usage(std::ostream& os, const VprContext& ctx) {
         }
 
         os << "\tOutput Pin Usage:\n";
-        os << "\t\tMax: " << max_outputs << " (" << max_outputs / float(total_output_pins[type]) << ")" << "\n";
-        os << "\t\tAvg: " << avg_outputs << " (" << avg_outputs / float(total_output_pins[type]) << ")" << "\n";
-        os << "\t\tMin: " << min_outputs << " (" << min_outputs / float(total_output_pins[type]) << ")" << "\n";
+        os << "\t\tMax: " << max_outputs << " (" << max_outputs / float(total_output_pins[type]) << ")"
+           << "\n";
+        os << "\t\tAvg: " << avg_outputs << " (" << avg_outputs / float(total_output_pins[type]) << ")"
+           << "\n";
+        os << "\t\tMin: " << min_outputs << " (" << min_outputs / float(total_output_pins[type]) << ")"
+           << "\n";
 
         if (total_output_pins[type] != 0) {
             os << "\t\tHistogram:\n";

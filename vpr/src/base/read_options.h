@@ -35,7 +35,7 @@ struct t_options {
     argparse::ArgValue<bool> do_power;
 
     /* Graphics Options */
-    argparse::ArgValue<bool> show_graphics; //Enable argparse::ArgValue<int>eractive graphics?
+    argparse::ArgValue<bool> show_graphics;  //Enable argparse::ArgValue<int>eractive graphics?
     argparse::ArgValue<int> GraphPause;
 
     /* General options */
@@ -43,7 +43,7 @@ struct t_options {
     argparse::ArgValue<bool> show_version;
     argparse::ArgValue<size_t> num_workers;
     argparse::ArgValue<bool> timing_analysis;
-    argparse::ArgValue<std::string> SlackDefinition; //TODO: eventually remove
+    argparse::ArgValue<std::string> SlackDefinition;  //TODO: eventually remove
     argparse::ArgValue<bool> CreateEchoFile;
     argparse::ArgValue<bool> verify_file_digests;
     argparse::ArgValue<std::string> device_layout;
@@ -110,7 +110,7 @@ struct t_options {
     argparse::ArgValue<float> bend_cost;
     argparse::ArgValue<e_route_type> RouteType;
     argparse::ArgValue<int> RouteChanWidth;
-    argparse::ArgValue<int> min_route_chan_width_hint; //Hint to binary search router about what the min chan width is
+    argparse::ArgValue<int> min_route_chan_width_hint;  //Hint to binary search router about what the min chan width is
     argparse::ArgValue<bool> verify_binary_search;
     argparse::ArgValue<e_router_algorithm> RouterAlgorithm;
     argparse::ArgValue<int> min_incremental_reroute_fanout;
@@ -139,7 +139,6 @@ struct t_options {
     argparse::ArgValue<int> timing_report_npaths;
     argparse::ArgValue<e_timing_report_detail> timing_report_detail;
     argparse::ArgValue<bool> timing_report_skew;
-
 };
 
 t_options read_options(int argc, const char** argv);

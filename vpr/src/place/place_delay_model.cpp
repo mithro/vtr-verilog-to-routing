@@ -21,7 +21,6 @@ float DeltaDelayModel::delay(int from_x, int from_y, int /*from_pin*/, int to_x,
 }
 
 void DeltaDelayModel::dump_echo(std::string filepath) const {
-
     FILE* f = vtr::fopen(filepath.c_str(), "w");
     fprintf(f, "         ");
     for (size_t dx = 0; dx < delays_.dim_size(0); ++dx) {
@@ -74,7 +73,6 @@ float OverrideDelayModel::delay(int from_x, int from_y, int from_pin, int to_x, 
 }
 
 void OverrideDelayModel::set_delay_override(int from_type, int from_class, int to_type, int to_class, int delta_x, int delta_y, float delay_val) {
-
     t_override override_key;
     override_key.from_type = from_type;
     override_key.from_class = from_class;
@@ -84,11 +82,10 @@ void OverrideDelayModel::set_delay_override(int from_type, int from_class, int t
     override_key.delta_y = delta_y;
 
     auto res = delay_overrides_.insert(std::make_pair(override_key, delay_val));
-    if (!res.second) { //Key already exists
-        res.first->second = delay_val; //Overwrite existing delay
+    if (!res.second) {  //Key already exists
+        res.first->second = delay_val;  //Overwrite existing delay
     }
 }
-
 
 void OverrideDelayModel::dump_echo(std::string filepath) const {
     base_delay_model_->dump_echo(filepath);
@@ -102,16 +99,14 @@ void OverrideDelayModel::dump_echo(std::string filepath) const {
         auto override_key = kv.first;
         float delay_val = kv.second;
         fprintf(f, "from_type: %s to_type: %s from_pin_class: %d to_pin_class: %d delta_x: %d delta_y: %d -> delay: %g\n",
-                device_ctx.block_types[override_key.from_type].name,
-                device_ctx.block_types[override_key.to_type].name,
-                override_key.from_class,
-                override_key.to_class,
-                override_key.delta_x,
-                override_key.delta_y,
-                delay_val);
+            device_ctx.block_types[override_key.from_type].name,
+            device_ctx.block_types[override_key.to_type].name,
+            override_key.from_class,
+            override_key.to_class,
+            override_key.delta_x,
+            override_key.delta_y,
+            delay_val);
     }
 
     vtr::fclose(f);
-
 }
-

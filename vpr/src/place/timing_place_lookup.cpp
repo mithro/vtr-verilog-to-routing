@@ -45,10 +45,10 @@ using namespace std;
 
 //#define VERBOSE
 
-constexpr float UNINITIALIZED_DELTA = -1; //Indicates the delta delay value has not been calculated
-constexpr float EMPTY_DELTA = -2; //Indicates delta delay from/to an EMPTY block
-constexpr float IMPOSSIBLE_DELTA = std::numeric_limits<float>::infinity(); //Indicates there is no valid delta delay
-constexpr float INVALID_DELTA = std::numeric_limits<float>::quiet_NaN(); //Indicates there is no valid delta delay
+constexpr float UNINITIALIZED_DELTA = -1;  //Indicates the delta delay value has not been calculated
+constexpr float EMPTY_DELTA = -2;  //Indicates delta delay from/to an EMPTY block
+constexpr float IMPOSSIBLE_DELTA = std::numeric_limits<float>::infinity();  //Indicates there is no valid delta delay
+constexpr float INVALID_DELTA = std::numeric_limits<float>::quiet_NaN();  //Indicates there is no valid delta delay
 
 struct t_profile_loc {
     t_profile_loc(int x, int y, std::vector<vtr::Point<int>> delta_values)
@@ -68,16 +68,18 @@ struct t_profile_info {
 
 /*** Function Prototypes *****/
 static t_chan_width setup_chan_width(t_router_opts router_opts,
-        t_chan_width_dist chan_width_dist);
+    t_chan_width_dist chan_width_dist);
 
-static float route_connection_delay(int source_x_loc, int source_y_loc,
-        int sink_x_loc, int sink_y_loc,
-        t_router_opts router_opts);
+static float route_connection_delay(int source_x_loc, int source_y_loc, int sink_x_loc, int sink_y_loc, t_router_opts router_opts);
 
-static void generic_compute_matrix(vtr::Matrix<std::vector<float>>& matrix, 
-        int source_x, int source_y, 
-        int start_x, int start_y, 
-        int end_x, int end_y, t_router_opts router_opts);
+static void generic_compute_matrix(vtr::Matrix<std::vector<float>>& matrix,
+    int source_x,
+    int source_y,
+    int start_x,
+    int start_y,
+    int end_x,
+    int end_y,
+    t_router_opts router_opts);
 
 static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& palcer_opts, const t_router_opts& router_opts, size_t longest_length);
 
@@ -86,9 +88,14 @@ float delay_reduce(std::vector<float>& delays, e_reducer reducer);
 static vtr::Matrix<float> compute_delta_delay_model(const t_placer_opts& placer_opts, const t_router_opts& router_opts, int longest_length);
 
 static bool find_direct_connect_sample_locations(const t_direct_inf* direct,
-                                                 t_type_ptr from_type, int from_pin, int from_pin_class,
-                                                 t_type_ptr to_type, int to_pin, int to_pin_class,
-                                                 int* src_rr, int* sink_rr);
+    t_type_ptr from_type,
+    int from_pin,
+    int from_pin_class,
+    t_type_ptr to_type,
+    int to_pin,
+    int to_pin_class,
+    int* src_rr,
+    int* sink_rr);
 
 static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_router_opts& router_opts, std::unique_ptr<PlaceDelayModel> base_model);
 
@@ -96,22 +103,24 @@ static bool verify_delta_delays(const vtr::Matrix<float>& delta_delays);
 static int get_best_class(enum e_pin_type pintype, t_type_ptr type);
 
 static int get_longest_segment_length(
-        t_det_routing_arch det_routing_arch, t_segment_inf * segment_inf);
+    t_det_routing_arch det_routing_arch,
+    t_segment_inf* segment_inf);
 
 static void fix_empty_coordinates(vtr::Matrix<float>& delta_delays);
 static void fix_uninitialized_coordinates(vtr::Matrix<float>& delta_delays);
 
-static float find_neightboring_average(vtr::Matrix<float> &matrix, int x, int y);
+static float find_neightboring_average(vtr::Matrix<float>& matrix, int x, int y);
 
 /******* Globally Accessible Functions **********/
 
 std::unique_ptr<PlaceDelayModel> compute_place_delay_model(
-        t_placer_opts placer_opts,
-        t_router_opts router_opts,
-        t_det_routing_arch *det_routing_arch, t_segment_inf * segment_inf,
-        t_chan_width_dist chan_width_dist, const t_direct_inf *directs,
-        const int num_directs) {
-
+    t_placer_opts placer_opts,
+    t_router_opts router_opts,
+    t_det_routing_arch* det_routing_arch,
+    t_segment_inf* segment_inf,
+    t_chan_width_dist chan_width_dist,
+    const t_direct_inf* directs,
+    const int num_directs) {
     vtr::ScopedStartFinishTimer timer("Computing placement delta delay look-up");
 
     init_placement_context();
@@ -119,15 +128,14 @@ std::unique_ptr<PlaceDelayModel> compute_place_delay_model(
     t_chan_width chan_width = setup_chan_width(router_opts, chan_width_dist);
 
     alloc_routing_structs(chan_width, router_opts, det_routing_arch, segment_inf,
-            directs, num_directs);
+        directs, num_directs);
 
     int longest_length = get_longest_segment_length((*det_routing_arch), segment_inf);
 
     /*now setup and compute the actual arrays */
     std::unique_ptr<PlaceDelayModel> place_delay_model;
-    if (placer_opts.delay_model_type == PlaceDelayModelType::DELTA 
-            || placer_opts.delay_model_type == PlaceDelayModelType::DELTA_OVERRIDE) {
-
+    if (placer_opts.delay_model_type == PlaceDelayModelType::DELTA
+        || placer_opts.delay_model_type == PlaceDelayModelType::DELTA_OVERRIDE) {
         auto delta_delays = compute_delta_delay_model(placer_opts, router_opts, longest_length);
         place_delay_model = std::make_unique<DeltaDelayModel>(std::move(delta_delays), router_opts);
 
@@ -149,7 +157,6 @@ std::unique_ptr<PlaceDelayModel> compute_place_delay_model(
 /******* File Accessible Functions **********/
 
 static int get_best_class(enum e_pin_type pintype, t_type_ptr type) {
-
     /*This function tries to identify the best pin class to hook up
      * for delay calculation.  The assumption is that we should pick
      * the pin class with the largest number of pins. This makes
@@ -165,9 +172,7 @@ static int get_best_class(enum e_pin_type pintype, t_type_ptr type) {
     best_class_num_pins = 0;
     currpin = 0;
     for (i = 0; i < type->num_class; i++) {
-
-        if (type->class_inf[i].type == pintype && !type->is_global_pin[currpin] &&
-                type->class_inf[i].num_pins > best_class_num_pins) {
+        if (type->class_inf[i].type == pintype && !type->is_global_pin[currpin] && type->class_inf[i].num_pins > best_class_num_pins) {
             //Save the best class
             best_class_num_pins = type->class_inf[i].num_pins;
             best_class = i;
@@ -180,8 +185,8 @@ static int get_best_class(enum e_pin_type pintype, t_type_ptr type) {
 }
 
 static int get_longest_segment_length(
-        t_det_routing_arch det_routing_arch, t_segment_inf * segment_inf) {
-
+    t_det_routing_arch det_routing_arch,
+    t_segment_inf* segment_inf) {
     int i, length;
 
     length = 0;
@@ -193,7 +198,7 @@ static int get_longest_segment_length(
 }
 
 static t_chan_width setup_chan_width(t_router_opts router_opts,
-        t_chan_width_dist chan_width_dist) {
+    t_chan_width_dist chan_width_dist) {
     /*we give plenty of tracks, this increases routability for the */
     /*lookup table generation */
 
@@ -215,8 +220,7 @@ static t_chan_width setup_chan_width(t_router_opts router_opts,
     return init_chan(width_fac, chan_width_dist);
 }
 
-static float route_connection_delay(int source_x, int source_y,
-        int sink_x, int sink_y, t_router_opts router_opts) {
+static float route_connection_delay(int source_x, int source_y, int sink_x, int sink_y, t_router_opts router_opts) {
     //Routes between the source and sink locations and calculates the delay
 
     float net_delay_value = IMPOSSIBLE_DELTA; /*set to known value for debug purposes */
@@ -246,19 +250,21 @@ static float route_connection_delay(int source_x, int source_y,
 
     if (!successfully_routed) {
         VTR_LOG_WARN(
-                "Unable to route between blocks at (%d,%d) and (%d,%d) to characterize delay (setting to %g)\n",
-                source_x, source_y, sink_x, sink_y, net_delay_value);
+            "Unable to route between blocks at (%d,%d) and (%d,%d) to characterize delay (setting to %g)\n",
+            source_x, source_y, sink_x, sink_y, net_delay_value);
     }
 
     return (net_delay_value);
 }
 
 static void generic_compute_matrix(vtr::Matrix<std::vector<float>>& matrix,
-        int source_x, int source_y,
-        int start_x, int start_y,
-        int end_x, int end_y,
-        t_router_opts router_opts) {
-
+    int source_x,
+    int source_y,
+    int start_x,
+    int start_y,
+    int end_x,
+    int end_y,
+    t_router_opts router_opts) {
     int delta_x, delta_y;
     int sink_x, sink_y;
 
@@ -272,20 +278,19 @@ static void generic_compute_matrix(vtr::Matrix<std::vector<float>>& matrix,
             t_type_ptr src_type = device_ctx.grid[source_x][source_y].type;
             t_type_ptr sink_type = device_ctx.grid[sink_x][sink_y].type;
 
-            bool src_or_target_empty = ( src_type == device_ctx.EMPTY_TYPE
+            bool src_or_target_empty = (src_type == device_ctx.EMPTY_TYPE
                                         || sink_type == device_ctx.EMPTY_TYPE);
 
             if (src_or_target_empty) {
-
                 if (matrix[delta_x][delta_y].empty()) {
                     //Only set empty target if we don't already have a valid delta delay
                     matrix[delta_x][delta_y].push_back(EMPTY_DELTA);
 #ifdef VERBOSE
                     VTR_LOG("Computed delay: %12s delta: %d,%d (src: %d,%d sink: %d,%d)\n",
-                                    "EMPTY",
-                                    delta_x, delta_y,
-                                    source_x, source_y,
-                                    sink_x, sink_y);
+                        "EMPTY",
+                        delta_x, delta_y,
+                        source_x, source_y,
+                        sink_x, sink_y);
 #endif
                 }
             } else {
@@ -295,10 +300,10 @@ static void generic_compute_matrix(vtr::Matrix<std::vector<float>>& matrix,
 
 #ifdef VERBOSE
                 VTR_LOG("Computed delay: %12g delta: %d,%d (src: %d,%d sink: %d,%d)\n",
-                        delay,
-                        delta_x, delta_y,
-                        source_x, source_y,
-                        sink_x, sink_y);
+                    delay,
+                    delta_x, delta_y,
+                    source_x, source_y,
+                    sink_x, sink_y);
 #endif
                 if (matrix[delta_x][delta_y].size() == 1 && matrix[delta_x][delta_y][0] == EMPTY_DELTA) {
                     //Overwrite empty delta
@@ -310,11 +315,9 @@ static void generic_compute_matrix(vtr::Matrix<std::vector<float>>& matrix,
             }
         }
     }
-
 }
 
 static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts, const t_router_opts& router_opts, size_t longest_length) {
-
     //To avoid edge effects we place the source at least 'longest_length' away
     //from the device edge
     //and route from there for all possible delta values < dimension
@@ -323,7 +326,6 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     auto& grid = device_ctx.grid;
 
     vtr::Matrix<std::vector<float>> sampled_delta_delays({grid.width(), grid.height()});
-
 
     size_t mid_x = vtr::nint(grid.width() / 2);
     size_t mid_y = vtr::nint(grid.height() / 2);
@@ -382,10 +384,10 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     VTR_LOG("Computing from lower left edge (%d,%d):\n", x, y);
 #endif
     generic_compute_matrix(sampled_delta_delays,
-            x, y,
-            x, y,
-            grid.width() - 1, grid.height() - 1,
-            router_opts);
+        x, y,
+        x, y,
+        grid.width() - 1, grid.height() - 1,
+        router_opts);
 
     //Find the lowest x location on the bottom edge with a non-empty block
     src_type = nullptr;
@@ -404,14 +406,13 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     }
     VTR_ASSERT(src_type != nullptr);
 #ifdef VERBOSE
-    VTR_LOG("Computing from left bottom edge (%d,%d):\n",x, y);
+    VTR_LOG("Computing from left bottom edge (%d,%d):\n", x, y);
 #endif
     generic_compute_matrix(sampled_delta_delays,
-            x, y,
-            x, y,
-            grid.width() - 1, grid.height() - 1,
-            router_opts);
-
+        x, y,
+        x, y,
+        grid.width() - 1, grid.height() - 1,
+        router_opts);
 
     //Since the other delta delay values may have suffered from edge effects,
     //we recalculate deltas within regions B, C, E, F
@@ -419,10 +420,10 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     VTR_LOG("Computing from low/low:\n");
 #endif
     generic_compute_matrix(sampled_delta_delays,
-            low_x, low_y,
-            low_x, low_y,
-            grid.width() - 1, grid.height() - 1,
-            router_opts);
+        low_x, low_y,
+        low_x, low_y,
+        grid.width() - 1, grid.height() - 1,
+        router_opts);
 
     //Since the other delta delay values may have suffered from edge effects,
     //we recalculate deltas within regions D, E, G, H
@@ -430,10 +431,10 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     VTR_LOG("Computing from high/high:\n");
 #endif
     generic_compute_matrix(sampled_delta_delays,
-            high_x, high_y,
-            0, 0,
-            high_x, high_y,
-            router_opts);
+        high_x, high_y,
+        0, 0,
+        high_x, high_y,
+        router_opts);
 
     //Since the other delta delay values may have suffered from edge effects,
     //we recalculate deltas within regions A, B, D, E
@@ -441,10 +442,10 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     VTR_LOG("Computing from high/low:\n");
 #endif
     generic_compute_matrix(sampled_delta_delays,
-            high_x, low_y,
-            0, low_y,
-            high_x, grid.height() - 1,
-            router_opts);
+        high_x, low_y,
+        0, low_y,
+        high_x, grid.height() - 1,
+        router_opts);
 
     //Since the other delta delay values may have suffered from edge effects,
     //we recalculate deltas within regions E, F, H, I
@@ -452,10 +453,10 @@ static vtr::Matrix<float> compute_delta_delays(const t_placer_opts& placer_opts,
     VTR_LOG("Computing from low/high:\n");
 #endif
     generic_compute_matrix(sampled_delta_delays,
-            low_x, high_y,
-            low_x, 0,
-            grid.width() - 1, high_y,
-            router_opts);
+        low_x, high_y,
+        low_x, 0,
+        grid.width() - 1, high_y,
+        router_opts);
 
     vtr::Matrix<float> delta_delays({grid.width(), grid.height()});
     for (size_t dx = 0; dx < sampled_delta_delays.dim_size(0); ++dx) {
@@ -500,7 +501,7 @@ float delay_reduce(std::vector<float>& delays, e_reducer reducer) {
 
 /* Take the average of the valid neighboring values in the matrix.
  * use interpolation to get the right answer for empty blocks*/
-static float find_neightboring_average(vtr::Matrix<float> &matrix, int x, int y) {
+static float find_neightboring_average(vtr::Matrix<float>& matrix, int x, int y) {
     float sum = 0;
     int counter = 0;
     int endx = matrix.end_index(0);
@@ -525,7 +526,6 @@ static float find_neightboring_average(vtr::Matrix<float> &matrix, int x, int y)
         }
     }
 
-
     if (counter == 0) {
         //take in more values for more accuracy
         sum = 0;
@@ -545,9 +545,8 @@ static float find_neightboring_average(vtr::Matrix<float> &matrix, int x, int y)
         }
     }
 
-
     if (counter != 0) {
-        return sum / (float) counter;
+        return sum / (float)counter;
     } else {
         return 0;
     }
@@ -590,28 +589,33 @@ static vtr::Matrix<float> compute_delta_delay_model(const t_placer_opts& placer_
 
 //Finds a src_rr and sink_rr appropriate for measuring the delay of the current direct specification
 static bool find_direct_connect_sample_locations(const t_direct_inf* direct,
-                                                 t_type_ptr from_type, int from_pin, int from_pin_class,
-                                                 t_type_ptr to_type, int to_pin, int to_pin_class,
-                                                 int* src_rr, int* sink_rr) {
+    t_type_ptr from_type,
+    int from_pin,
+    int from_pin_class,
+    t_type_ptr to_type,
+    int to_pin,
+    int to_pin_class,
+    int* src_rr,
+    int* sink_rr) {
     VTR_ASSERT(from_type != nullptr);
     VTR_ASSERT(to_type != nullptr);
 
     auto& device_ctx = g_vpr_ctx.device();
     auto& grid = device_ctx.grid;
 
-
     //Search the grid for an instance of from/to blocks which satisfy this direct connect offsets,
     //and which has the appropriate pins
     int from_x = 0, from_y = 0, from_z = 0;
     int to_x = 0, to_y = 0, to_z = 0;
     bool found = false;
-    for (from_x = 0; from_x < (int) grid.width(); ++from_x) {
-
+    for (from_x = 0; from_x < (int)grid.width(); ++from_x) {
         to_x = from_x + direct->x_offset;
-        if (to_x < 0 || to_x >= (int) grid.width()) continue;
+        if (to_x < 0 || to_x >= (int)grid.width())
+            continue;
 
-        for (from_y = 0; from_y < (int) grid.height(); ++from_y) {
-            if (grid[from_x][from_y].type != from_type) continue;
+        for (from_y = 0; from_y < (int)grid.height(); ++from_y) {
+            if (grid[from_x][from_y].type != from_type)
+                continue;
 
             //Check that the from pin exists at this from location
             //(with multi-width/height blocks pins may not exist at all locations)
@@ -623,12 +627,15 @@ static bool find_direct_connect_sample_locations(const t_direct_inf* direct,
                 std::vector<int> from_pin_rrs = get_rr_node_indices(device_ctx.rr_node_indices, from_x, from_y, OPIN, from_pin);
                 from_pin_found = !from_pin_rrs.empty();
             }
-            if (!from_pin_found) continue;
+            if (!from_pin_found)
+                continue;
 
             to_y = from_y + direct->y_offset;
 
-            if (to_y < 0 || to_y >= (int) grid.height()) continue;
-            if (grid[to_x][to_y].type != to_type) continue;
+            if (to_y < 0 || to_y >= (int)grid.height())
+                continue;
+            if (grid[to_x][to_y].type != to_type)
+                continue;
 
             //Check that the from pin exists at this from location
             //(with multi-width/height blocks pins may not exist at all locations)
@@ -640,19 +647,23 @@ static bool find_direct_connect_sample_locations(const t_direct_inf* direct,
                 std::vector<int> to_pin_rrs = get_rr_node_indices(device_ctx.rr_node_indices, to_x, to_y, IPIN, to_pin);
                 to_pin_found = !to_pin_rrs.empty();
             }
-            if (!to_pin_found) continue;
+            if (!to_pin_found)
+                continue;
 
             for (from_z = 0; from_z < from_type->capacity; ++from_z) {
                 to_z = from_z + direct->z_offset;
 
-                if (to_z < 0 || to_z >= to_type->capacity) continue;
+                if (to_z < 0 || to_z >= to_type->capacity)
+                    continue;
 
                 found = true;
                 break;
             }
-            if (found) break;
+            if (found)
+                break;
         }
-        if (found) break;
+        if (found)
+            break;
     }
 
     if (!found) {
@@ -690,15 +701,14 @@ static bool verify_delta_delays(const vtr::Matrix<float>& delta_delays) {
     auto& device_ctx = g_vpr_ctx.device();
     auto& grid = device_ctx.grid;
 
-    for(size_t x = 0; x < grid.width(); ++x) {
-        for(size_t y = 0; y < grid.height(); ++y) {
-
+    for (size_t x = 0; x < grid.width(); ++x) {
+        for (size_t y = 0; y < grid.height(); ++y) {
             float delta_delay = delta_delays[x][y];
 
             if (delta_delay < 0.) {
                 VPR_THROW(VPR_ERROR_PLACE,
-                        "Found invaild negative delay %g for delta (%d,%d)",
-                        delta_delay, x, y);
+                    "Found invaild negative delay %g for delta (%d,%d)",
+                    delta_delay, x, y);
             }
         }
     }
@@ -707,7 +717,6 @@ static bool verify_delta_delays(const vtr::Matrix<float>& delta_delays) {
 }
 
 static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_router_opts& router_opts, std::unique_ptr<PlaceDelayModel> base_model) {
-    
     auto delay_model = std::make_unique<OverrideDelayModel>(std::move(base_model), router_opts);
 
     t_router_opts router_opts2 = router_opts;
@@ -727,7 +736,6 @@ static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_
         int num_conns = from_port.port_high_index() - from_port.port_low_index() + 1;
         VTR_ASSERT_MSG(num_conns == to_port.port_high_index() - to_port.port_low_index() + 1, "Directs must have the same size to/from");
 
-
         //We now walk through all the connections associated with the current direct specification, measure
         //their delay and specify that value as an override in the delay model.
         //
@@ -735,9 +743,9 @@ static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_
         //equivalent.
         //
         //However, if the from/to ports are equivalent we could end up sampling the same RR SOURCE/SINK
-        //paths multiple times (wasting CPU time) -- we avoid this by recording the sampled paths in 
+        //paths multiple times (wasting CPU time) -- we avoid this by recording the sampled paths in
         //sampled_rr_pairs and skipping them if they occur multiple times.
-        std::set<std::pair<int,int>> sampled_rr_pairs;
+        std::set<std::pair<int, int>> sampled_rr_pairs;
         for (int iconn = 0; iconn < num_conns; ++iconn) {
             //Find the associated pins
             int from_pin = find_pin(from_type, from_port.port_name(), from_port.port_low_index() + iconn);
@@ -756,7 +764,6 @@ static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_
             int sink_rr = OPEN;
             bool found_sample_points = find_direct_connect_sample_locations(direct, from_type, from_pin, from_pin_class, to_type, to_pin, to_pin_class, &src_rr, &sink_rr);
 
-
             if (!found_sample_points) {
                 VTR_LOG_WARN("Failed to find delta delay for inter-block direct connect '%s' (no instances of this direct found)\n", direct->name);
                 continue;
@@ -764,7 +771,8 @@ static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_
 
             //If some of the source/sink ports are logically equivalent we may have already
             //sampled the associated source/sink pair and don't need to do so again
-            if (sampled_rr_pairs.count({src_rr,sink_rr})) continue;
+            if (sampled_rr_pairs.count({src_rr, sink_rr}))
+                continue;
 
             VTR_ASSERT(src_rr != OPEN);
             VTR_ASSERT(sink_rr != OPEN);
@@ -779,7 +787,7 @@ static std::unique_ptr<OverrideDelayModel> compute_override_delay_model(const t_
             }
 
             //Record that we've sampled this pair of source and sink nodes
-            sampled_rr_pairs.insert({src_rr,sink_rr});
+            sampled_rr_pairs.insert({src_rr, sink_rr});
         }
     }
 

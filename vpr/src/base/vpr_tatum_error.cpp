@@ -15,7 +15,6 @@ std::string format_tatum_error(const tatum::Error& error) {
     }
 
     if (error.node) {
-        
         AtomPinId pin = atom_ctx.lookup.tnode_atom_pin(error.node);
         if (pin) {
             msg += "Netlist Pin: '" + atom_ctx.nlist.pin_name(pin) + "', ";

@@ -1,7 +1,7 @@
 #ifndef VPR_TRACEBACK_H
 #define VPR_TRACEBACK_H
 
-struct t_trace; //Forward declaration
+struct t_trace;  //Forward declaration
 
 struct t_traceback {
     t_traceback() = default;

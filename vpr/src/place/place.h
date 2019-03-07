@@ -3,14 +3,16 @@
 
 #include "vpr_types.h"
 void try_place(t_placer_opts placer_opts,
-		t_annealing_sched annealing_sched,
-        t_router_opts router_opts,
-        const t_analysis_opts& analysis_opts,
-		t_chan_width_dist chan_width_dist, 
-		t_det_routing_arch *det_routing_arch, t_segment_inf * segment_inf,
+    t_annealing_sched annealing_sched,
+    t_router_opts router_opts,
+    const t_analysis_opts& analysis_opts,
+    t_chan_width_dist chan_width_dist,
+    t_det_routing_arch* det_routing_arch,
+    t_segment_inf* segment_inf,
 #ifdef ENABLE_CLASSIC_VPR_STA
-		t_timing_inf timing_inf,
+    t_timing_inf timing_inf,
 #endif
-        t_direct_inf *directs, int num_directs);
+    t_direct_inf* directs,
+    int num_directs);
 
 #endif

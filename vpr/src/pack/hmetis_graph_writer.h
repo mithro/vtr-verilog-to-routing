@@ -2,6 +2,6 @@
 #define HMETIS_GRAPH_WRITER
 #include <string>
 
-void write_hmetis_graph(std::string &file_name);
+void write_hmetis_graph(std::string& file_name);
 
 #endif

@@ -6,7 +6,6 @@
 #ifndef RR_GRAPH_WRITER_H
 #define RR_GRAPH_WRITER_H
 
-
-void write_rr_graph(const char *file_name, const t_segment_inf* segment_inf, const int num_seg_types);
+void write_rr_graph(const char* file_name, const t_segment_inf* segment_inf, const int num_seg_types);
 
 #endif

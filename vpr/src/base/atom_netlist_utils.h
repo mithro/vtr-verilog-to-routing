@@ -28,11 +28,11 @@ void absorb_buffer_luts(AtomNetlist& netlist, int verbosity);
 //until nothing more can be swept.
 //If sweep_ios is true also sweeps primary-inputs and primary-outputs
 size_t sweep_iterative(AtomNetlist& netlist,
-                       bool should_sweep_dangling_ios,
-                       bool should_sweep_dangling_blocks,
-                       bool should_sweep_dangling_nets,
-                       bool should_sweep_constant_primary_outputs,
-                       int verbosity);
+    bool should_sweep_dangling_ios,
+    bool should_sweep_dangling_blocks,
+    bool should_sweep_dangling_nets,
+    bool should_sweep_constant_primary_outputs,
+    int verbosity);
 
 //Sweeps blocks that have no fanout
 size_t sweep_blocks(AtomNetlist& netlist, int verbosity);
