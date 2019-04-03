@@ -5,7 +5,7 @@
 sphinx_rtd_theme
 
 # Support custom domains
-sphinxcontrib-domaintools
+-e git+https://@github.com/mithro/domaintools.git#egg=sphinxcontrib-domaintools
 
 # Support Markdown
 recommonmark
