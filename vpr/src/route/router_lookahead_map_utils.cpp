@@ -56,6 +56,9 @@ static vtr::Point<int> pick_sample_tile(t_physical_tile_type_ptr tile_type, vtr:
 // This is used when building the SROURCE/OPIN --> CHAN lookup table that contains additional delay and
 // congestion data to reach the CHANX/CHANY nodes which is not present in the lookahead cost map.
 #define DIRECT_CONNECT_SPECIAL_SEG_TYPE -1;
+=======
+#include "route_common.h"
+>>>>>>> Use get_rr_cong_cost to compute base_cost's.
 
 namespace util {
 
