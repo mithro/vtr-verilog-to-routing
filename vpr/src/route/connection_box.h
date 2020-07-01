@@ -63,6 +63,9 @@ class ConnectionBoxes {
     void add_connection_box(int inode, ConnectionBoxId box_id, std::pair<size_t, size_t> box_location, float site_pin_delay);
     void add_canonical_loc(int inode, std::pair<size_t, size_t> loc);
 
+    // Verify that all connection box annotations match defined connection boxes.
+    void verify_connection_boxes();
+
     // Create map from SINK's back to IPIN's
     //
     // This must be called after all connection boxes have been added.

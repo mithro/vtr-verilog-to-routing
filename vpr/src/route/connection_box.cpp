@@ -53,8 +53,6 @@ bool ConnectionBoxes::find_connection_box(int inode,
 // Clear IPIN map and set connection box grid size and box ids.
 void ConnectionBoxes::reset_boxes(std::pair<size_t, size_t> size,
                                   const std::vector<ConnectionBox> boxes) {
-    clear();
-
     size_ = size;
     boxes_ = boxes;
 }
@@ -75,15 +73,34 @@ void ConnectionBoxes::clear() {
     sink_to_ipin_.clear();
 }
 
+void ConnectionBoxes::verify_connection_boxes() {
+    if (size_.first == 0 && size_.second == 0) {
+        return;
+    }
+
+    for (const auto& loc : canonical_loc_map_) {
+        VTR_ASSERT(loc.first < size_.first);
+        VTR_ASSERT(loc.second < size_.second);
+    }
+
+    for (const auto& conn_box_loc : ipin_map_) {
+        if (conn_box_loc.box_id == ConnectionBoxId::INVALID()) {
+            continue;
+        }
+        const auto& box_location = conn_box_loc.box_location;
+        const auto& box_id = conn_box_loc.box_id;
+
+        // Ensure that box location is in bounds
+        VTR_ASSERT(box_location.first < size_.first);
+        VTR_ASSERT(box_location.second < size_.second);
+
+        // Bounds check box_id
+        VTR_ASSERT(bool(box_id));
+        VTR_ASSERT(size_t(box_id) < boxes_.size());
+    }
+}
+
 void ConnectionBoxes::add_connection_box(int inode, ConnectionBoxId box_id, std::pair<size_t, size_t> box_location, float site_pin_delay) {
-    // Ensure that box location is in bounds
-    VTR_ASSERT(box_location.first < size_.first);
-    VTR_ASSERT(box_location.second < size_.second);
-
-    // Bounds check box_id
-    VTR_ASSERT(bool(box_id));
-    VTR_ASSERT(size_t(box_id) < boxes_.size());
-
     // Make sure sink map will not be invalidated upon insertion.
     VTR_ASSERT(sink_to_ipin_.size() == 0);
 
@@ -94,8 +111,6 @@ void ConnectionBoxes::add_connection_box(int inode, ConnectionBoxId box_id, std:
 }
 
 void ConnectionBoxes::add_canonical_loc(int inode, std::pair<size_t, size_t> loc) {
-    VTR_ASSERT(loc.first < size_.first);
-    VTR_ASSERT(loc.second < size_.second);
     if (inode >= (ssize_t)(canonical_loc_map_.size())) {
         canonical_loc_map_.resize(inode + 1);
     }
@@ -117,6 +132,7 @@ const std::pair<size_t, size_t>* ConnectionBoxes::find_canonical_loc(int inode) 
 
 void ConnectionBoxes::create_sink_back_ref() {
     const auto& device_ctx = g_vpr_ctx.device();
+    verify_connection_boxes();
 
     sink_to_ipin_.resize(device_ctx.rr_nodes.size(), {{0, 0, 0, 0}, 0});
 

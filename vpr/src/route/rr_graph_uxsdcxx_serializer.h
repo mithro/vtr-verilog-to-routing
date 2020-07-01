@@ -303,6 +303,7 @@ class RrGraphSerializer final : public uxsd::RrGraphBase<RrGraphContextTypes> {
         // report_error_in should be invoked if RrGraphSerializer encounters
         // an error during the read.
         report_error_ = report_error_in;
+        connection_boxes_->clear();
     }
     void start_write() final {}
     void finish_write() final {}
