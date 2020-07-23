@@ -79,8 +79,19 @@ void ConnectionBoxes::verify_connection_boxes() {
     }
 
     for (const auto& loc : canonical_loc_map_) {
-        VTR_ASSERT(loc.first < size_.first);
-        VTR_ASSERT(loc.second < size_.second);
+        if (loc.first == size_t(-1)) {
+            VTR_ASSERT(loc.second == size_t(-1));
+            continue;
+        }
+
+        if (loc.first >= size_.first) {
+            VPR_FATAL_ERROR(VPR_ERROR_ROUTE, "loc.first (%zu) >= size_.first (%zu)",
+                            loc.first, size_.first);
+        }
+        if (loc.second >= size_.second) {
+            VPR_FATAL_ERROR(VPR_ERROR_ROUTE, "loc.second (%zu) >= size_.second (%zu)",
+                            loc.second, size_.second);
+        }
     }
 
     for (const auto& conn_box_loc : ipin_map_) {
