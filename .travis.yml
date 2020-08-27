@@ -212,6 +212,7 @@ jobs:
         - ./.github/travis/cron_build.sh
 
 install:
+  - ./.github/travis/setup-apt-cache.sh
   - ./.github/travis/setup-compiler.sh
 
 before_script:
@@ -221,6 +222,9 @@ before_script:
 
 after_script:
   - ./.github/travis/setup.sh
+
+before_cache:
+  - ./.github/travis/before-cache.sh
 
 script:
   - true
