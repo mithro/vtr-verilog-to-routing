@@ -60,7 +60,7 @@ static constexpr double kSamplingCountLowerQuantile = 0.5;
 static constexpr double kSamplingCountUpperQuantile = 0.7;
 
 // a sample point for a segment type, contains all segments at the VPR location
-struct SamplePoint {
+struct ConnectionBoxSamplePoint {
     // canonical location
     vtr::Point<int> location;
 
@@ -68,7 +68,7 @@ struct SamplePoint {
     std::vector<ssize_t> nodes;
 };
 
-struct SampleRegion {
+struct ConnectionBoxSampleRegion {
     // all nodes in `points' have this segment type
     int segment_type;
 
@@ -78,7 +78,7 @@ struct SampleRegion {
     // locations to try
     // The computation will keep expanding each of the points
     // until a number of paths (segment -> connection box) are found.
-    std::vector<SamplePoint> points;
+    std::vector<ConnectionBoxSamplePoint> points;
 
     // used to sort the regions to improve caching
     uint64_t order;
@@ -90,16 +90,11 @@ static std::pair<float, int> run_dijkstra(int start_node_ind,
                                           std::vector<util::Search_Path>* paths,
                                           RoutingCosts* routing_costs);
 
-static std::vector<SampleRegion> find_sample_regions(int num_segments);
+static std::vector<ConnectionBoxSampleRegion> find_sample_regions(int num_segments);
 
 // also known as the L1 norm
 static int manhattan_distance(const vtr::Point<int>& a, const vtr::Point<int>& b) {
     return abs(b.x() - a.x()) + abs(b.y() - a.y());
-}
-
-template<class T>
-constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
-    return std::min(std::max(v, lo), hi);
 }
 
 template<typename T>
@@ -107,13 +102,13 @@ static vtr::Point<T> closest_point_in_rect(const vtr::Rect<T>& r, const vtr::Poi
     if (r.empty()) {
         return vtr::Point<T>(0, 0);
     } else {
-        return vtr::Point<T>(clamp<T>(p.x(), r.xmin(), r.xmax() - 1),
-                             clamp<T>(p.y(), r.ymin(), r.ymax() - 1));
+        return vtr::Point<T>(vtr::clamp<T>(p.x(), r.xmin(), r.xmax() - 1),
+                             vtr::clamp<T>(p.y(), r.ymin(), r.ymax() - 1));
     }
 }
 
 // build the segment map
-void CostMap::build_segment_map() {
+void ConnectionBoxCostMap::build_segment_map() {
     const auto& device_ctx = g_vpr_ctx.device();
     segment_map_.resize(device_ctx.rr_nodes.size());
     for (size_t i = 0; i < segment_map_.size(); ++i) {
@@ -127,7 +122,7 @@ void CostMap::build_segment_map() {
 }
 
 // resize internal data structures
-void CostMap::set_counts(size_t seg_count, size_t box_count) {
+void ConnectionBoxCostMap::set_counts(size_t seg_count, size_t box_count) {
     cost_map_.clear();
     offset_.clear();
     penalty_.clear();
@@ -139,7 +134,7 @@ void CostMap::set_counts(size_t seg_count, size_t box_count) {
 }
 
 // cached node -> segment map
-int CostMap::node_to_segment(int from_node_ind) const {
+int ConnectionBoxCostMap::node_to_segment(int from_node_ind) const {
     return segment_map_[from_node_ind];
 }
 
@@ -150,7 +145,7 @@ static util::Cost_Entry penalize(const util::Cost_Entry& entry, int distance, fl
 }
 
 // get a cost entry for a segment type, connection box type, and offset
-util::Cost_Entry CostMap::find_cost(int from_seg_index, ConnectionBoxId box_id, int delta_x, int delta_y) const {
+util::Cost_Entry ConnectionBoxCostMap::find_cost(int from_seg_index, ConnectionBoxId box_id, int delta_x, int delta_y) const {
     VTR_ASSERT(from_seg_index >= 0 && from_seg_index < (ssize_t)offset_.size());
     const auto& cost_map = cost_map_[from_seg_index][size_t(box_id)];
     if (cost_map.dim_size(0) == 0 || cost_map.dim_size(1) == 0) {
@@ -168,7 +163,7 @@ util::Cost_Entry CostMap::find_cost(int from_seg_index, ConnectionBoxId box_id, 
 }
 
 // set the cost map for a segment type and connection box type, filling holes
-void CostMap::set_cost_map(const RoutingCosts& delay_costs, const RoutingCosts& base_costs) {
+void ConnectionBoxCostMap::set_cost_map(const RoutingCosts& delay_costs, const RoutingCosts& base_costs) {
     // calculate the bounding boxes
     vtr::Matrix<vtr::Rect<int>> bounds({seg_count_, box_count_});
     for (const auto& entry : delay_costs) {
@@ -298,7 +293,7 @@ void CostMap::set_cost_map(const RoutingCosts& delay_costs, const RoutingCosts& 
 // o => above average
 // . => at or below average
 // * => invalid (missing)
-void CostMap::print(int iseg) const {
+void ConnectionBoxCostMap::print(int iseg) const {
     const auto& device_ctx = g_vpr_ctx.device();
     for (size_t box_id = 0;
          box_id < device_ctx.connection_boxes.num_connection_box_types();
@@ -340,7 +335,7 @@ void CostMap::print(int iseg) const {
 }
 
 // list segment type and connection box type pairs that have empty cost maps (debug)
-std::vector<std::pair<int, int>> CostMap::list_empty() const {
+std::vector<std::pair<int, int>> ConnectionBoxCostMap::list_empty() const {
     std::vector<std::pair<int, int>> results;
     for (int iseg = 0; iseg < (int)cost_map_.dim_size(0); iseg++) {
         for (int box_id = 0; box_id < (int)cost_map_.dim_size(1); box_id++) {
@@ -361,7 +356,7 @@ static void assign_min_entry(util::Cost_Entry* dst, const util::Cost_Entry& src)
 }
 
 // find the minimum cost entry from the nearest manhattan distance neighbor
-std::pair<util::Cost_Entry, int> CostMap::get_nearby_cost_entry(const vtr::NdMatrix<util::Cost_Entry, 2>& matrix,
+std::pair<util::Cost_Entry, int> ConnectionBoxCostMap::get_nearby_cost_entry(const vtr::NdMatrix<util::Cost_Entry, 2>& matrix,
                                                                 int cx,
                                                                 int cy,
                                                                 const vtr::Rect<int>& bounds) {
@@ -403,65 +398,73 @@ std::pair<util::Cost_Entry, int> CostMap::get_nearby_cost_entry(const vtr::NdMat
 }
 
 // derive a cost from the map between two nodes
-float ConnectionBoxMapLookahead::get_map_cost(int from_node_ind,
-                                              int to_node_ind,
-                                              float criticality_fac) const {
-    if (from_node_ind == to_node_ind) {
-        return 0.f;
+std::pair<float, float> ConnectionBoxMapLookahead::get_expected_delay_and_cong(int inode, int target_node, const t_conn_cost_params& params, float R_upstream) const {
+    if (inode == target_node) {
+        return std::make_pair(0., 0.);
     }
+
+    RRNodeId from_node(inode);
+    RRNodeId to_node(target_node);
 
     auto& device_ctx = g_vpr_ctx.device();
 
-    auto to_node_type = device_ctx.rr_nodes[to_node_ind].type();
+    auto to_node_type = device_ctx.rr_nodes.node_type(to_node);
 
     if (to_node_type == SINK) {
-        const auto& sink_to_ipin = device_ctx.connection_boxes.find_sink_connection_boxes(to_node_ind);
+        const auto& sink_to_ipin = device_ctx.connection_boxes.find_sink_connection_boxes(target_node);
         float cost = std::numeric_limits<float>::infinity();
-
+        float delay = std::numeric_limits<float>::infinity();
+        float cong = std::numeric_limits<float>::infinity();
         // Find cheapest cost from from_node_ind to IPINs for this SINK.
         for (int i = 0; i < sink_to_ipin.ipin_count; ++i) {
-            cost = std::min(cost,
-                            get_map_cost(
-                                from_node_ind,
-                                sink_to_ipin.ipin_nodes[i], criticality_fac));
+            float new_cost, new_delay, new_cong;
+            std::tie(new_delay, new_cong) = get_expected_delay_and_cong(inode, sink_to_ipin.ipin_nodes[i], params, R_upstream);
+
+            new_cost = new_delay + new_cong;
+            if (new_cost < cost) {
+                delay = new_delay;
+                cong = new_cong;
+                cost = new_cost;
+            }
+
             if (cost <= 0.f) break;
         }
 
-        return cost;
+        return std::pair<float, float>(delay, cong);
     }
 
-    if (device_ctx.rr_nodes[to_node_ind].type() != IPIN) {
-        VPR_THROW(VPR_ERROR_ROUTE, "Not an IPIN/SINK, is %d", to_node_ind);
+    if (to_node_type != IPIN) {
+        VPR_THROW(VPR_ERROR_ROUTE, "Not an IPIN/SINK, is %d", target_node);
     }
     ConnectionBoxId box_id;
     std::pair<size_t, size_t> box_location;
     float site_pin_delay;
     bool found = device_ctx.connection_boxes.find_connection_box(
-        to_node_ind, &box_id, &box_location, &site_pin_delay);
+        target_node, &box_id, &box_location, &site_pin_delay);
     if (!found) {
-        VPR_THROW(VPR_ERROR_ROUTE, "No connection box for IPIN %d", to_node_ind);
+        VPR_THROW(VPR_ERROR_ROUTE, "No connection box for IPIN %d", target_node);
     }
 
-    const std::pair<size_t, size_t>* from_canonical_loc = device_ctx.connection_boxes.find_canonical_loc(from_node_ind);
+    const std::pair<size_t, size_t>* from_canonical_loc = device_ctx.connection_boxes.find_canonical_loc(inode);
     if (from_canonical_loc == nullptr) {
         VPR_THROW(VPR_ERROR_ROUTE, "No canonical loc for %d (to %d)",
-                  from_node_ind, to_node_ind);
+                  inode, target_node);
     }
 
     ssize_t dx = ssize_t(from_canonical_loc->first) - ssize_t(box_location.first);
     ssize_t dy = ssize_t(from_canonical_loc->second) - ssize_t(box_location.second);
 
-    int from_seg_index = cost_map_.node_to_segment(from_node_ind);
+    int from_seg_index = cost_map_.node_to_segment(inode);
     util::Cost_Entry cost_entry = cost_map_.find_cost(from_seg_index, box_id, dx, dy);
 
     if (!cost_entry.valid()) {
         // there is no route
         VTR_LOGV_DEBUG(f_router_debug,
                        "Not connected %d (%s, %d) -> %d (%s, %d, (%d, %d))\n",
-                       from_node_ind, device_ctx.rr_nodes[from_node_ind].type_string(), from_seg_index,
-                       to_node_ind, device_ctx.rr_nodes[to_node_ind].type_string(),
+                       inode, device_ctx.rr_nodes[inode].type_string(), from_seg_index,
+                       target_node, device_ctx.rr_nodes[target_node].type_string(),
                        (int)size_t(box_id), (int)box_location.first, (int)box_location.second);
-        return std::numeric_limits<float>::infinity();
+        return std::pair<float, float>(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity());
     }
 
     float expected_delay = cost_entry.delay;
@@ -469,19 +472,22 @@ float ConnectionBoxMapLookahead::get_map_cost(int from_node_ind,
 
     expected_delay += site_pin_delay;
 
-    float expected_cost = criticality_fac * expected_delay + (1.0 - criticality_fac) * expected_congestion;
+    float expected_delay_cost = params.criticality * expected_delay;
+    float expected_cong_cost = (1.0 - params.criticality) * expected_congestion;
 
-    VTR_LOGV_DEBUG(f_router_debug, "Requested lookahead from node %d to %d\n", from_node_ind, to_node_ind);
-    const std::string& segment_name = device_ctx.segment_inf[from_seg_index].name;
+    float expected_cost = expected_delay_cost + expected_cong_cost;
+
+    VTR_LOGV_DEBUG(f_router_debug, "Requested lookahead from node %d to %d\n", inode, target_node);
+    const std::string& segment_name = device_ctx.rr_segments[from_seg_index].name;
     const std::string& box_name = device_ctx.connection_boxes.get_connection_box(box_id)->name;
     VTR_LOGV_DEBUG(f_router_debug, "Lookahead returned %s (%d) to %s (%zu) with distance (%zd, %zd)\n",
                    segment_name.c_str(), from_seg_index,
                    box_name.c_str(),
                    size_t(box_id),
                    dx, dy);
-    VTR_LOGV_DEBUG(f_router_debug, "Lookahead delay: %g\n", expected_delay);
-    VTR_LOGV_DEBUG(f_router_debug, "Lookahead congestion: %g\n", expected_congestion);
-    VTR_LOGV_DEBUG(f_router_debug, "Criticality: %g\n", criticality_fac);
+    VTR_LOGV_DEBUG(f_router_debug, "Lookahead delay: %g\n", expected_delay_cost);
+    VTR_LOGV_DEBUG(f_router_debug, "Lookahead congestion: %g\n", expected_cong_cost);
+    VTR_LOGV_DEBUG(f_router_debug, "Criticality: %g\n", params.criticality);
     VTR_LOGV_DEBUG(f_router_debug, "Lookahead cost: %g\n", expected_cost);
     VTR_LOGV_DEBUG(f_router_debug, "Site pin delay: %g\n", site_pin_delay);
 
@@ -490,12 +496,12 @@ float ConnectionBoxMapLookahead::get_map_cost(int from_node_ind,
         VTR_ASSERT(0);
     }
 
-    return expected_cost;
+    return std::make_pair(expected_delay_cost, expected_cong_cost);
 }
 
 // add a best cost routing path from start_node_ind to node_ind to routing costs
 template<typename Entry>
-static bool add_paths(int start_node_ind,
+static bool add_paths(RRNodeId start_node,
                       Entry current,
                       const std::vector<util::Search_Path>& paths,
                       RoutingCosts* routing_costs) {
@@ -503,28 +509,29 @@ static bool add_paths(int start_node_ind,
     ConnectionBoxId box_id;
     std::pair<size_t, size_t> box_location;
     float site_pin_delay;
-    int node_ind = current.rr_node_ind;
+    RRNodeId node = current.rr_node;
     bool found = device_ctx.connection_boxes.find_connection_box(
-        node_ind, &box_id, &box_location, &site_pin_delay);
+        size_t(node), &box_id, &box_location, &site_pin_delay);
     bool new_sample_found = false;
     if (!found) {
-        VPR_THROW(VPR_ERROR_ROUTE, "No connection box for IPIN %d", node_ind);
+        VPR_THROW(VPR_ERROR_ROUTE, "No connection box for IPIN %d", size_t(node));
     }
 
     // reconstruct the path
     std::vector<int> path;
-    for (int i = paths[node_ind].parent; i != start_node_ind; i = paths[i].parent) {
-        VTR_ASSERT(i != -1);
+    for (size_t i = paths[size_t(node)].parent; i != size_t(start_node); i = paths[i].parent) {
+        VTR_ASSERT(i != std::numeric_limits<size_t>::max());
         path.push_back(i);
     }
-    path.push_back(start_node_ind);
+    path.push_back(size_t(start_node));
 
     current.adjust_Tsw(-site_pin_delay);
 
     // add each node along the path subtracting the incremental costs from the current costs
-    Entry start_to_here(start_node_ind, UNDEFINED, nullptr);
-    int parent = start_node_ind;
+    Entry start_to_here(start_node, UNDEFINED, nullptr);
+    RRNodeId parent = start_node;
     for (auto it = path.rbegin(); it != path.rend(); it++) {
+        RRNodeId this_node(*it);
         auto& here = device_ctx.rr_nodes[*it];
         int seg_index = device_ctx.rr_indexed_data[here.cost_index()].seg_index;
         const std::pair<size_t, size_t>* from_canonical_loc = device_ctx.connection_boxes.find_canonical_loc(*it);
@@ -539,10 +546,10 @@ static bool add_paths(int start_node_ind,
             box_id,
             delta};
 
-        if (*it != start_node_ind) {
-            auto& parent_node = device_ctx.rr_nodes[parent];
-            start_to_here = Entry(*it, parent_node.edge_switch(paths[*it].edge), &start_to_here);
-            parent = *it;
+        if (this_node != start_node) {
+            auto& parent_node = device_ctx.rr_nodes[size_t(parent)];
+            start_to_here = Entry(this_node, parent_node.edge_switch(paths[*it].edge), &start_to_here);
+            parent = this_node;
         }
 
         float cost = current.cost() - start_to_here.cost();
@@ -594,12 +601,15 @@ static std::pair<float, int> run_dijkstra(int start_node_ind,
      * visited (used to determine whether to push a candidate node onto the
      * expansion queue.
      * Also store the parent node so we can reconstruct a specific path. */
-    std::fill(paths->begin(), paths->end(), util::Search_Path{std::numeric_limits<float>::infinity(), -1, -1});
+    std::fill(paths->begin(), paths->end(), util::Search_Path{std::numeric_limits<float>::infinity(), std::numeric_limits<size_t>::max(), -1});
+
     /* a priority queue for expansion */
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> pq;
 
+    RRNodeId start_node(start_node_ind);
+
     /* first entry has no upstream delay or congestion */
-    Entry first_entry(start_node_ind, UNDEFINED, nullptr);
+    Entry first_entry(start_node, UNDEFINED, nullptr);
     float max_cost = first_entry.cost();
 
     pq.push(first_entry);
@@ -609,24 +619,24 @@ static std::pair<float, int> run_dijkstra(int start_node_ind,
         auto current = pq.top();
         pq.pop();
 
-        int node_ind = current.rr_node_ind;
+        RRNodeId node = current.rr_node;
 
         /* check that we haven't already expanded from this node */
-        if ((*node_expanded)[node_ind]) {
+        if ((*node_expanded)[size_t(node)]) {
             continue;
         }
 
         /* if this node is an ipin record its congestion/delay in the routing_cost_map */
-        if (device_ctx.rr_nodes[node_ind].type() == IPIN) {
+        if (device_ctx.rr_nodes.node_type(node) == IPIN) {
             // the last cost should be the highest
             max_cost = current.cost();
 
             path_count++;
-            add_paths<Entry>(start_node_ind, current, *paths, routing_costs);
+            add_paths<Entry>(start_node, current, *paths, routing_costs);
         } else {
             util::expand_dijkstra_neighbours(device_ctx.rr_nodes,
                                              current, paths, node_expanded, &pq);
-            (*node_expanded)[node_ind] = true;
+            (*node_expanded)[size_t(node)] = true;
         }
     }
     return std::make_pair(max_cost, path_count);
@@ -640,7 +650,7 @@ void ConnectionBoxMapLookahead::compute(const std::vector<t_segment_inf>& segmen
     alloc_and_load_rr_node_route_structs();
 
     size_t num_segments = segment_inf.size();
-    std::vector<SampleRegion> sample_regions = find_sample_regions(num_segments);
+    std::vector<ConnectionBoxSampleRegion> sample_regions = find_sample_regions(num_segments);
 
     /* free previous delay map and allocate new one */
     auto& device_ctx = g_vpr_ctx.device();
@@ -655,7 +665,7 @@ void ConnectionBoxMapLookahead::compute(const std::vector<t_segment_inf>& segmen
     /* run Dijkstra's algorithm for each segment type & channel type combination */
 #if defined(VPR_USE_TBB)
     tbb::mutex all_costs_mutex;
-    tbb::parallel_for_each(sample_regions, [&](const SampleRegion& region) {
+    tbb::parallel_for_each(sample_regions, [&](const ConnectionBoxSampleRegion& region) {
 #else
     for (const auto& region : sample_regions) {
 #endif
@@ -782,14 +792,17 @@ float ConnectionBoxMapLookahead::get_expected_cost(
     int current_node,
     int target_node,
     const t_conn_cost_params& params,
-    float /*R_upstream*/) const {
+    float R_upstream) const {
     auto& device_ctx = g_vpr_ctx.device();
 
     t_rr_type rr_type = device_ctx.rr_nodes[current_node].type();
 
     if (rr_type == CHANX || rr_type == CHANY) {
-        return get_map_cost(
-            current_node, target_node, params.criticality);
+        float delay_cost, cong_cost;
+
+        // Get the total cost using the combined delay and congestion costs
+        std::tie(delay_cost, cong_cost) = get_expected_delay_and_cong(current_node, target_node, params, R_upstream);
+        return delay_cost + cong_cost;
     } else if (rr_type == IPIN) { /* Change if you're allowing route-throughs */
         return (device_ctx.rr_indexed_data[SINK_COST_INDEX].base_cost);
     } else { /* Change this if you want to investigate route-throughs */
@@ -812,16 +825,16 @@ static vtr::Rect<int> sample_window(const vtr::Rect<int>& bounding_box, int sx, 
                           sample(bounding_box, sx + 1, sy + 1, n));
 }
 
-static std::vector<SamplePoint> choose_points(const vtr::Matrix<int>& counts,
+static std::vector<ConnectionBoxSamplePoint> choose_points(const vtr::Matrix<int>& counts,
                                               const vtr::Rect<int>& window,
                                               int min_count,
                                               int max_count) {
     VTR_ASSERT(min_count <= max_count);
-    std::vector<SamplePoint> points;
+    std::vector<ConnectionBoxSamplePoint> points;
     for (int y = window.ymin(); y < window.ymax(); y++) {
         for (int x = window.xmin(); x < window.xmax(); x++) {
             if (counts[x][y] >= min_count && counts[x][y] <= max_count) {
-                points.push_back(SamplePoint{/* .location = */ vtr::Point<int>(x, y),
+                points.push_back(ConnectionBoxSamplePoint{/* .location = */ vtr::Point<int>(x, y),
                                              /* .nodes = */ {}});
             }
         }
@@ -831,7 +844,7 @@ static std::vector<SamplePoint> choose_points(const vtr::Matrix<int>& counts,
 
     // sort by distance from center
     std::sort(points.begin(), points.end(),
-              [&](const SamplePoint& a, const SamplePoint& b) {
+              [&](const ConnectionBoxSamplePoint& a, const ConnectionBoxSamplePoint& b) {
                   return manhattan_distance(a.location, center) < manhattan_distance(b.location, center);
               });
 
@@ -890,9 +903,9 @@ static uint64_t interleave(uint32_t x) {
 
 // for each segment type, find the nearest nodes to an equally spaced grid of points
 // within the bounding box for that segment type
-static std::vector<SampleRegion> find_sample_regions(int num_segments) {
+static std::vector<ConnectionBoxSampleRegion> find_sample_regions(int num_segments) {
     vtr::ScopedStartFinishTimer timer("finding sample regions");
-    std::vector<SampleRegion> sample_regions;
+    std::vector<ConnectionBoxSampleRegion> sample_regions;
     auto& device_ctx = g_vpr_ctx.device();
     auto& rr_nodes = device_ctx.rr_nodes;
     std::vector<vtr::Matrix<int>> segment_counts(num_segments);
@@ -943,7 +956,7 @@ static std::vector<SampleRegion> find_sample_regions(int num_segments) {
                 if (window.empty()) continue;
 
                 auto histogram = count_histogram(window, segment_counts[i]);
-                SampleRegion region = {
+                ConnectionBoxSampleRegion region = {
                     /* .segment_type = */ i,
                     /* .grid_location = */ vtr::Point<int>(x, y),
                     /* .points = */ choose_points(counts, window, quantile(histogram, kSamplingCountLowerQuantile), quantile(histogram, kSamplingCountUpperQuantile)),
@@ -970,12 +983,12 @@ static std::vector<SampleRegion> find_sample_regions(int num_segments) {
 
     // sort regions
     std::sort(sample_regions.begin(), sample_regions.end(),
-              [](const SampleRegion& a, const SampleRegion& b) {
+              [](const ConnectionBoxSampleRegion& a, const ConnectionBoxSampleRegion& b) {
                   return a.order < b.order;
               });
 
     // build an index of sample points on segment type and location
-    std::map<std::tuple<int, int, int>, SamplePoint*> sample_point_index;
+    std::map<std::tuple<int, int, int>, ConnectionBoxSamplePoint*> sample_point_index;
     for (auto& region : sample_regions) {
         for (auto& point : region.points) {
             sample_point_index[std::make_tuple(region.segment_type, point.location.x(), point.location.y())] = &point;
@@ -1065,7 +1078,7 @@ static void FromFloat(VprFloatEntry::Builder* out, const float& in) {
     out->setValue(in);
 }
 
-void CostMap::read(const std::string& file) {
+void ConnectionBoxCostMap::read(const std::string& file) {
     build_segment_map();
     MmapFile f(file);
 
@@ -1092,7 +1105,7 @@ void CostMap::read(const std::string& file) {
     }
 }
 
-void CostMap::write(const std::string& file) const {
+void ConnectionBoxCostMap::write(const std::string& file) const {
     ::capnp::MallocMessageBuilder builder;
 
     auto cost_map = builder.initRoot<VprCostMap>();

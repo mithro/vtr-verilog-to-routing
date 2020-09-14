@@ -47,7 +47,7 @@ struct HashRoutingCostKey {
 typedef std::unordered_map<RoutingCostKey, float, HashRoutingCostKey> RoutingCosts;
 
 // Dense cost maps per source segment and destination connection box types
-class CostMap {
+class ConnectionBoxCostMap {
   public:
     void set_counts(size_t seg_count, size_t box_count);
     void build_segment_map();
@@ -73,13 +73,15 @@ class CostMap {
 class ConnectionBoxMapLookahead : public RouterLookahead {
   public:
     float get_expected_cost(int node, int target_node, const t_conn_cost_params& params, float R_upstream) const override;
+    std::pair<float, float> get_expected_delay_and_cong(int inode, int target_node, const t_conn_cost_params& params, float R_upstream) const override;
+
     float get_map_cost(int from_node_ind, int to_node_ind, float criticality_fac) const;
     void compute(const std::vector<t_segment_inf>& segment_inf) override;
 
     void read(const std::string& file) override;
     void write(const std::string& file) const override;
 
-    CostMap cost_map_;
+    ConnectionBoxCostMap cost_map_;
 };
 
 #endif
