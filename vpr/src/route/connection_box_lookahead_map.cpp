@@ -357,9 +357,9 @@ static void assign_min_entry(util::Cost_Entry* dst, const util::Cost_Entry& src)
 
 // find the minimum cost entry from the nearest manhattan distance neighbor
 std::pair<util::Cost_Entry, int> ConnectionBoxCostMap::get_nearby_cost_entry(const vtr::NdMatrix<util::Cost_Entry, 2>& matrix,
-                                                                int cx,
-                                                                int cy,
-                                                                const vtr::Rect<int>& bounds) {
+                                                                             int cx,
+                                                                             int cy,
+                                                                             const vtr::Rect<int>& bounds) {
     // spiral around (cx, cy) looking for a nearby entry
     bool in_bounds = bounds.contains(vtr::Point<int>(cx, cy));
     if (!in_bounds) {
@@ -826,16 +826,16 @@ static vtr::Rect<int> sample_window(const vtr::Rect<int>& bounding_box, int sx, 
 }
 
 static std::vector<ConnectionBoxSamplePoint> choose_points(const vtr::Matrix<int>& counts,
-                                              const vtr::Rect<int>& window,
-                                              int min_count,
-                                              int max_count) {
+                                                           const vtr::Rect<int>& window,
+                                                           int min_count,
+                                                           int max_count) {
     VTR_ASSERT(min_count <= max_count);
     std::vector<ConnectionBoxSamplePoint> points;
     for (int y = window.ymin(); y < window.ymax(); y++) {
         for (int x = window.xmin(); x < window.xmax(); x++) {
             if (counts[x][y] >= min_count && counts[x][y] <= max_count) {
                 points.push_back(ConnectionBoxSamplePoint{/* .location = */ vtr::Point<int>(x, y),
-                                             /* .nodes = */ {}});
+                                                          /* .nodes = */ {}});
             }
         }
     }
