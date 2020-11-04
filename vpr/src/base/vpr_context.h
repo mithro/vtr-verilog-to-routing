@@ -24,6 +24,7 @@
 #include "place_macro.h"
 #include "compressed_grid.h"
 #include "metadata_storage.h"
+#include "connection_box.h"
 
 /**
  * @brief A Context is collection of state relating to a particular part of VPR
@@ -231,6 +232,8 @@ struct DeviceContext : public Context {
      * Used to determine when reading rrgraph if file is already loaded.
      */
     std::string read_rr_graph_filename;
+
+    ConnectionBoxes connection_boxes;
 };
 
 /**

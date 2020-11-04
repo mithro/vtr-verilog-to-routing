@@ -366,7 +366,23 @@ static void load_rr_indexed_data_T_values(int index_start,
         double avg_switch_Cinternal = 0;
         int num_switches = 0;
         short buffered = UNDEFINED;
-        calculate_average_switch(inode, avg_switch_R, avg_switch_T, avg_switch_Cinternal, num_switches, buffered);
+
+        // FIXME: This reintroduces the non-averaging of the switches.
+        //        It will be solved once https://github.com/verilog-to-routing/vtr-verilog-to-routing/pull/1576
+        //        gets merged
+        int num_edges = device_ctx.rr_nodes[inode].num_edges();
+        for (int iedge = 0; iedge < num_edges; iedge++) {
+            int to_node_index = device_ctx.rr_nodes[inode].edge_sink_node(iedge);
+            /* want to get C/R/Tdel/Cinternal of switches that connect this track segment to other track segments */
+            if (device_ctx.rr_nodes[to_node_index].type() == CHANX || device_ctx.rr_nodes[to_node_index].type() == CHANY) {
+                int switch_index = device_ctx.rr_nodes[inode].edge_switch(iedge);
+                avg_switch_R += device_ctx.rr_switch_inf[switch_index].R;
+                avg_switch_T += device_ctx.rr_switch_inf[switch_index].Tdel;
+                avg_switch_Cinternal += device_ctx.rr_switch_inf[switch_index].Cinternal;
+
+                num_switches++;
+            }
+        }
 
         if (num_switches == 0) {
             VTR_LOG_WARN("Track %d had no out-going switches\n", itrack);

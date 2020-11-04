@@ -2,11 +2,11 @@
 # https://github.com/duck2/uxsdcxx
 # Modify only if your build process doesn't involve regenerating this file.
 #
-# Cmdline: uxsdcxx/uxsdcap.py /home/kmurray/trees/vtr/vpr/src/route/rr_graph.xsd
-# Input file: /home/kmurray/trees/vtr/vpr/src/route/rr_graph.xsd
-# md5sum of input file: 40e83d2ea6556761d4e29f21324b1871
+# Cmdline: uxsdcxx/uxsdcap.py rr_graph.xsd
+# Input file: rr_graph.xsd
+# md5sum of input file: bea3923ac9822e94db96d5d9d15e18c6
 
-@0xb803100e76d3342d;
+@0xf281a101eeb2a247;
 using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("ucap");
 
@@ -176,6 +176,18 @@ struct Metadata {
 	metas @0 :List(Meta);
 }
 
+struct CanonicalLoc {
+	x @0 :UInt32;
+	y @1 :UInt32;
+}
+
+struct ConnectionBoxAnnotation {
+	id @0 :UInt32;
+	sitePinDelay @1 :Float32;
+	x @2 :UInt32;
+	y @3 :UInt32;
+}
+
 struct Node {
 	capacity @0 :UInt32;
 	direction @1 :NodeDirection;
@@ -185,6 +197,8 @@ struct Node {
 	timing @5 :NodeTiming;
 	segment @6 :NodeSegment;
 	metadata @7 :Metadata;
+	canonicalLoc @8 :CanonicalLoc;
+	connectionBox @9 :ConnectionBoxAnnotation;
 }
 
 struct RrNodes {
@@ -202,6 +216,18 @@ struct RrEdges {
 	edges @0 :List(Edge);
 }
 
+struct ConnectionBoxDeclaration {
+	id @0 :UInt32;
+	name @1 :Text;
+}
+
+struct ConnectionBoxes {
+	numBoxes @0 :UInt32;
+	xDim @1 :UInt32;
+	yDim @2 :UInt32;
+	connectionBoxes @3 :List(ConnectionBoxDeclaration);
+}
+
 struct RrGraph {
 	toolComment @0 :Text;
 	toolName @1 :Text;
@@ -213,4 +239,5 @@ struct RrGraph {
 	grid @7 :GridLocs;
 	rrNodes @8 :RrNodes;
 	rrEdges @9 :RrEdges;
+	connectionBoxes @10 :ConnectionBoxes;
 }

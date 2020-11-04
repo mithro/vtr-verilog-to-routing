@@ -4,9 +4,9 @@
  * https://github.com/duck2/uxsdcxx
  * Modify only if your build process doesn't involve regenerating this file.
  *
- * Cmdline: uxsdcxx/uxsdcap.py /home/kmurray/trees/vtr/vpr/src/route/rr_graph.xsd
- * Input file: /home/kmurray/trees/vtr/vpr/src/route/rr_graph.xsd
- * md5sum of input file: 40e83d2ea6556761d4e29f21324b1871
+ * Cmdline: uxsdcxx/uxsdcap.py rr_graph.xsd
+ * Input file: rr_graph.xsd
+ * md5sum of input file: bea3923ac9822e94db96d5d9d15e18c6
  */
 
 #include <functional>
@@ -68,6 +68,10 @@ void load_meta_capnp_type(const ucap::Meta::Reader& root, T& out, Context& conte
 template<class T, typename Context>
 void load_metadata_capnp_type(const ucap::Metadata::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
 template<class T, typename Context>
+void load_canonical_loc_capnp_type(const ucap::CanonicalLoc::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
+template<class T, typename Context>
+void load_connection_box_annotation_capnp_type(const ucap::ConnectionBoxAnnotation::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
+template<class T, typename Context>
 void load_node_capnp_type(const ucap::Node::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
 template<class T, typename Context>
 void load_rr_nodes_capnp_type(const ucap::RrNodes::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
@@ -75,6 +79,10 @@ template<class T, typename Context>
 void load_edge_capnp_type(const ucap::Edge::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
 template<class T, typename Context>
 void load_rr_edges_capnp_type(const ucap::RrEdges::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
+template<class T, typename Context>
+void load_connection_box_declaration_capnp_type(const ucap::ConnectionBoxDeclaration::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
+template<class T, typename Context>
+void load_connection_boxes_capnp_type(const ucap::ConnectionBoxes::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
 template<class T, typename Context>
 void load_rr_graph_capnp_type(const ucap::RrGraph::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack);
 
@@ -111,6 +119,8 @@ template<class T, typename Context>
 inline void write_edge_capnp_type(T& in, ucap::Edge::Builder& root, Context& context);
 template<class T, typename Context>
 inline void write_rr_edges_capnp_type(T& in, ucap::RrEdges::Builder& root, Context& context);
+template<class T, typename Context>
+inline void write_connection_boxes_capnp_type(T& in, ucap::ConnectionBoxes::Builder& root, Context& context);
 template<class T, typename Context>
 inline void write_rr_graph_capnp_type(T& in, ucap::RrGraph::Builder& root, Context& context);
 
@@ -711,6 +721,24 @@ inline void load_metadata_capnp_type(const ucap::Metadata::Reader& root, T& out,
 }
 
 template<class T, typename Context>
+inline void load_canonical_loc_capnp_type(const ucap::CanonicalLoc::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack) {
+    (void)root;
+    (void)out;
+    (void)context;
+    (void)report_error;
+    (void)stack;
+}
+
+template<class T, typename Context>
+inline void load_connection_box_annotation_capnp_type(const ucap::ConnectionBoxAnnotation::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack) {
+    (void)root;
+    (void)out;
+    (void)context;
+    (void)report_error;
+    (void)stack;
+}
+
+template<class T, typename Context>
 inline void load_node_capnp_type(const ucap::Node::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack) {
     (void)root;
     (void)out;
@@ -749,6 +777,22 @@ inline void load_node_capnp_type(const ucap::Node::Reader& root, T& out, Context
         auto child_context = out.init_node_metadata(context);
         load_metadata_capnp_type(child_el, out, child_context, report_error, stack);
         out.finish_node_metadata(child_context);
+    }
+    stack->pop_back();
+    stack->push_back(std::make_pair("getCanonicalLoc", 0));
+    if (root.hasCanonicalLoc()) {
+        auto child_el = root.getCanonicalLoc();
+        auto child_context = out.init_node_canonical_loc(context, child_el.getX(), child_el.getY());
+        load_canonical_loc_capnp_type(child_el, out, child_context, report_error, stack);
+        out.finish_node_canonical_loc(child_context);
+    }
+    stack->pop_back();
+    stack->push_back(std::make_pair("getConnectionBox", 0));
+    if (root.hasConnectionBox()) {
+        auto child_el = root.getConnectionBox();
+        auto child_context = out.init_node_connection_box(context, child_el.getId(), child_el.getSitePinDelay(), child_el.getX(), child_el.getY());
+        load_connection_box_annotation_capnp_type(child_el, out, child_context, report_error, stack);
+        out.finish_node_connection_box(child_context);
     }
     stack->pop_back();
 }
@@ -809,6 +853,39 @@ inline void load_rr_edges_capnp_type(const ucap::RrEdges::Reader& root, T& out, 
             auto child_context = out.add_rr_edges_edge(context, el.getSinkNode(), el.getSrcNode(), el.getSwitchId());
             load_edge_capnp_type(el, out, child_context, report_error, stack);
             out.finish_rr_edges_edge(child_context);
+            stack->back().second += 1;
+        }
+    }
+    stack->pop_back();
+}
+
+template<class T, typename Context>
+inline void load_connection_box_declaration_capnp_type(const ucap::ConnectionBoxDeclaration::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack) {
+    (void)root;
+    (void)out;
+    (void)context;
+    (void)report_error;
+    (void)stack;
+
+    out.set_connection_box_declaration_name(root.getName().cStr(), context);
+}
+
+template<class T, typename Context>
+inline void load_connection_boxes_capnp_type(const ucap::ConnectionBoxes::Reader& root, T& out, Context& context, const std::function<void(const char*)>* report_error, std::vector<std::pair<const char*, size_t>>* stack) {
+    (void)root;
+    (void)out;
+    (void)context;
+    (void)report_error;
+    (void)stack;
+
+    stack->push_back(std::make_pair("getConnectionBox", 0));
+    {
+        auto data = root.getConnectionBoxes();
+        out.preallocate_connection_boxes_connection_box(context, data.size());
+        for (const auto& el : data) {
+            auto child_context = out.add_connection_boxes_connection_box(context, el.getId());
+            load_connection_box_declaration_capnp_type(el, out, child_context, report_error, stack);
+            out.finish_connection_boxes_connection_box(child_context);
             stack->back().second += 1;
         }
     }
@@ -880,6 +957,14 @@ inline void load_rr_graph_capnp_type(const ucap::RrGraph::Reader& root, T& out, 
         auto child_context = out.init_rr_graph_rr_edges(context);
         load_rr_edges_capnp_type(child_el, out, child_context, report_error, stack);
         out.finish_rr_graph_rr_edges(child_context);
+    }
+    stack->pop_back();
+    stack->push_back(std::make_pair("getConnectionBoxes", 0));
+    if (root.hasConnectionBoxes()) {
+        auto child_el = root.getConnectionBoxes();
+        auto child_context = out.init_rr_graph_connection_boxes(context, child_el.getNumBoxes(), child_el.getXDim(), child_el.getYDim());
+        load_connection_boxes_capnp_type(child_el, out, child_context, report_error, stack);
+        out.finish_rr_graph_connection_boxes(child_context);
     }
     stack->pop_back();
 }
@@ -1126,6 +1211,22 @@ inline void write_node_capnp_type(T& in, ucap::Node::Builder& root, Context& con
         auto child_context = in.get_node_metadata(context);
         write_metadata_capnp_type(in, node_metadata, child_context);
     }
+
+    if (in.has_node_canonical_loc(context)) {
+        auto node_canonical_loc = root.initCanonicalLoc();
+        auto child_context = in.get_node_canonical_loc(context);
+        node_canonical_loc.setX(in.get_canonical_loc_x(child_context));
+        node_canonical_loc.setY(in.get_canonical_loc_y(child_context));
+    }
+
+    if (in.has_node_connection_box(context)) {
+        auto node_connection_box = root.initConnectionBox();
+        auto child_context = in.get_node_connection_box(context);
+        node_connection_box.setId(in.get_connection_box_annotation_id(child_context));
+        node_connection_box.setSitePinDelay(in.get_connection_box_annotation_site_pin_delay(child_context));
+        node_connection_box.setX(in.get_connection_box_annotation_x(child_context));
+        node_connection_box.setY(in.get_connection_box_annotation_y(child_context));
+    }
 }
 
 template<class T, typename Context>
@@ -1177,6 +1278,21 @@ inline void write_rr_edges_capnp_type(T& in, ucap::RrEdges::Builder& root, Conte
 }
 
 template<class T, typename Context>
+inline void write_connection_boxes_capnp_type(T& in, ucap::ConnectionBoxes::Builder& root, Context& context) {
+    (void)in;
+    (void)root;
+
+    size_t num_connection_boxes_connection_boxes = in.num_connection_boxes_connection_box(context);
+    auto connection_boxes_connection_boxes = root.initConnectionBoxes(num_connection_boxes_connection_boxes);
+    for (size_t i = 0; i < num_connection_boxes_connection_boxes; i++) {
+        auto connection_boxes_connection_box = connection_boxes_connection_boxes[i];
+        auto child_context = in.get_connection_boxes_connection_box(i, context);
+        connection_boxes_connection_box.setId(in.get_connection_box_declaration_id(child_context));
+        connection_boxes_connection_box.setName(in.get_connection_box_declaration_name(child_context));
+    }
+}
+
+template<class T, typename Context>
 inline void write_rr_graph_capnp_type(T& in, ucap::RrGraph::Builder& root, Context& context) {
     (void)in;
     (void)root;
@@ -1221,6 +1337,15 @@ inline void write_rr_graph_capnp_type(T& in, ucap::RrGraph::Builder& root, Conte
         auto child_context = in.get_rr_graph_rr_edges(context);
         auto rr_graph_rr_edges = root.initRrEdges();
         write_rr_edges_capnp_type(in, rr_graph_rr_edges, child_context);
+    }
+
+    if (in.has_rr_graph_connection_boxes(context)) {
+        auto rr_graph_connection_boxes = root.initConnectionBoxes();
+        auto child_context = in.get_rr_graph_connection_boxes(context);
+        rr_graph_connection_boxes.setNumBoxes(in.get_connection_boxes_num_boxes(child_context));
+        rr_graph_connection_boxes.setXDim(in.get_connection_boxes_x_dim(child_context));
+        rr_graph_connection_boxes.setYDim(in.get_connection_boxes_y_dim(child_context));
+        write_connection_boxes_capnp_type(in, rr_graph_connection_boxes, child_context);
     }
 }
 
