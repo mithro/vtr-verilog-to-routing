@@ -69,9 +69,14 @@ struct RoutingMetrics {
  * File-scope variables
  */
 
-//Run-time flag to control when router debug information is printed
-//Note only enables debug output if compiled with VTR_ENABLE_DEBUG_LOGGING defined
-//f_router_debug is used to stop the router when a breakpoint is reached. When a breakpoint is reached, this flag is set to true.
+/**
+ * @brief Run-time flag to control when router debug information is printed
+ * Note only enables debug output if compiled with VTR_ENABLE_DEBUG_LOGGING defined
+ * f_router_debug is used to stop the router when a breakpoint is reached. When a breakpoint is reached, this flag is set to true.
+ *
+ * In addition f_router_debug is used to print additional debug information during routing, for instance lookahead expected costs
+ * information.
+ */
 bool f_router_debug = false;
 
 //Count the number of times the router has failed
@@ -2139,7 +2144,7 @@ static void init_net_delay_from_lookahead(const RouterLookahead& router_lookahea
         for (size_t ipin = 1; ipin < cluster_ctx.clb_nlist.net_pins(net_id).size(); ++ipin) {
             int sink_rr = route_ctx.net_rr_terminals[net_id][ipin];
 
-            float est_delay = router_lookahead.get_expected_cost(source_rr, sink_rr, cost_params, /*R_upstream=*/0.);
+            float est_delay = router_lookahead.get_expected_cost(RRNodeId(source_rr), RRNodeId(sink_rr), cost_params, /*R_upstream=*/0.);
             VTR_ASSERT(std::isfinite(est_delay) && est_delay < std::numeric_limits<float>::max());
 
             net_delay[net_id][ipin] = est_delay;

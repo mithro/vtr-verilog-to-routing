@@ -2,12 +2,11 @@
 
 #include "router_lookahead_map.h"
 #include "router_lookahead_extended_map.h"
-#include "connection_box_lookahead_map.h"
 #include "vpr_error.h"
 #include "globals.h"
 #include "route_timing.h"
 
-static int get_expected_segs_to_target(int inode, int target_node, int* num_segs_ortho_dir_ptr);
+static int get_expected_segs_to_target(RRNodeId inode, RRNodeId target_node, int* num_segs_ortho_dir_ptr);
 static int round_up(float x);
 
 static std::unique_ptr<RouterLookahead> make_router_lookahead_object(e_router_lookahead router_lookahead_type) {
@@ -17,8 +16,6 @@ static std::unique_ptr<RouterLookahead> make_router_lookahead_object(e_router_lo
         return std::make_unique<MapLookahead>();
     } else if (router_lookahead_type == e_router_lookahead::EXTENDED_MAP) {
         return std::make_unique<ExtendedMapLookahead>();
-    } else if (router_lookahead_type == e_router_lookahead::CONNECTION_BOX_MAP) {
-        return std::make_unique<ConnectionBoxMapLookahead>();
     } else if (router_lookahead_type == e_router_lookahead::NO_OP) {
         return std::make_unique<NoOpLookahead>();
     }
@@ -47,25 +44,23 @@ std::unique_ptr<RouterLookahead> make_router_lookahead(
     return router_lookahead;
 }
 
-float ClassicLookahead::get_expected_cost(int current_node, int target_node, const t_conn_cost_params& params, float R_upstream) const {
+float ClassicLookahead::get_expected_cost(RRNodeId current_node, RRNodeId target_node, const t_conn_cost_params& params, float R_upstream) const {
     float delay_cost, cong_cost;
     std::tie(delay_cost, cong_cost) = get_expected_delay_and_cong(current_node, target_node, params, R_upstream);
 
     return delay_cost + cong_cost;
 }
 
-std::pair<float, float> ClassicLookahead::get_expected_delay_and_cong(int node, int target_node, const t_conn_cost_params& params, float R_upstream) const {
+std::pair<float, float> ClassicLookahead::get_expected_delay_and_cong(RRNodeId node, RRNodeId target_node, const t_conn_cost_params& params, float R_upstream) const {
     auto& device_ctx = g_vpr_ctx.device();
 
-    t_rr_type rr_type = device_ctx.rr_nodes[node].type();
+    t_rr_type rr_type = device_ctx.rr_nodes.node_type(node);
 
     if (rr_type == CHANX || rr_type == CHANY) {
-        VTR_ASSERT_SAFE(device_ctx.rr_nodes[node].type() == CHANX || device_ctx.rr_nodes[node].type() == CHANY);
-
         int num_segs_ortho_dir = 0;
         int num_segs_same_dir = get_expected_segs_to_target(node, target_node, &num_segs_ortho_dir);
 
-        int cost_index = device_ctx.rr_nodes[node].cost_index();
+        int cost_index = device_ctx.rr_nodes.node_cost_index(node);
         int ortho_cost_index = device_ctx.rr_indexed_data[cost_index].ortho_cost_index;
 
         const auto& same_data = device_ctx.rr_indexed_data[cost_index];
@@ -85,12 +80,7 @@ std::pair<float, float> ClassicLookahead::get_expected_delay_and_cong(int node, 
                      + R_upstream * (num_segs_same_dir * same_data.C_load + num_segs_ortho_dir * ortho_data.C_load)
                      + ipin_data.T_linear;
 
-        float penalty_cost = num_segs_same_dir * same_data.penalty_cost
-                             + num_segs_ortho_dir * ortho_data.penalty_cost
-                             + ipin_data.penalty_cost
-                             + sink_data.penalty_cost;
-
-        return std::make_pair(penalty_cost + params.criticality * Tdel, (1 - params.criticality) * cong_cost);
+        return std::make_pair(params.criticality * Tdel, (1 - params.criticality) * cong_cost);
     } else if (rr_type == IPIN) { /* Change if you're allowing route-throughs */
         return std::make_pair(0., device_ctx.rr_indexed_data[SINK_COST_INDEX].base_cost);
 
@@ -99,11 +89,11 @@ std::pair<float, float> ClassicLookahead::get_expected_delay_and_cong(int node, 
     }
 }
 
-float NoOpLookahead::get_expected_cost(int /*current_node*/, int /*target_node*/, const t_conn_cost_params& /*params*/, float /*R_upstream*/) const {
+float NoOpLookahead::get_expected_cost(RRNodeId /*current_node*/, RRNodeId /*target_node*/, const t_conn_cost_params& /*params*/, float /*R_upstream*/) const {
     return 0.;
 }
 
-std::pair<float, float> NoOpLookahead::get_expected_delay_and_cong(int /*node*/, int /*target_node*/, const t_conn_cost_params& /*params*/, float /*R_upstream*/) const {
+std::pair<float, float> NoOpLookahead::get_expected_delay_and_cong(RRNodeId /*node*/, RRNodeId /*target_node*/, const t_conn_cost_params& /*params*/, float /*R_upstream*/) const {
     return std::make_pair(0., 0.);
 }
 
@@ -113,7 +103,7 @@ static int round_up(float x) {
     return std::ceil(x - 0.001);
 }
 
-static int get_expected_segs_to_target(int inode, int target_node, int* num_segs_ortho_dir_ptr) {
+static int get_expected_segs_to_target(RRNodeId inode, RRNodeId target_node, int* num_segs_ortho_dir_ptr) {
     /* Returns the number of segments the same type as inode that will be needed *
      * to reach target_node (not including inode) in each direction (the same    *
      * direction (horizontal or vertical) as inode and the orthogonal direction).*/
@@ -125,18 +115,19 @@ static int get_expected_segs_to_target(int inode, int target_node, int* num_segs
     int no_need_to_pass_by_clb;
     float inv_length, ortho_inv_length, ylow, yhigh, xlow, xhigh;
 
-    target_x = device_ctx.rr_nodes[target_node].xlow();
-    target_y = device_ctx.rr_nodes[target_node].ylow();
-    cost_index = device_ctx.rr_nodes[inode].cost_index();
+    target_x = device_ctx.rr_nodes.node_xlow(target_node);
+    target_y = device_ctx.rr_nodes.node_ylow(target_node);
+
+    cost_index = device_ctx.rr_nodes.node_cost_index(inode);
     inv_length = device_ctx.rr_indexed_data[cost_index].inv_length;
     ortho_cost_index = device_ctx.rr_indexed_data[cost_index].ortho_cost_index;
     ortho_inv_length = device_ctx.rr_indexed_data[ortho_cost_index].inv_length;
-    rr_type = device_ctx.rr_nodes[inode].type();
+    rr_type = device_ctx.rr_nodes.node_type(inode);
 
     if (rr_type == CHANX) {
-        ylow = device_ctx.rr_nodes[inode].ylow();
-        xhigh = device_ctx.rr_nodes[inode].xhigh();
-        xlow = device_ctx.rr_nodes[inode].xlow();
+        ylow = device_ctx.rr_nodes.node_ylow(inode);
+        xhigh = device_ctx.rr_nodes.node_xhigh(inode);
+        xlow = device_ctx.rr_nodes.node_xlow(inode);
 
         /* Count vertical (orthogonal to inode) segs first. */
 
@@ -161,9 +152,9 @@ static int get_expected_segs_to_target(int inode, int target_node, int* num_segs
             num_segs_same_dir = 0;
         }
     } else { /* inode is a CHANY */
-        ylow = device_ctx.rr_nodes[inode].ylow();
-        yhigh = device_ctx.rr_nodes[inode].yhigh();
-        xlow = device_ctx.rr_nodes[inode].xlow();
+        ylow = device_ctx.rr_nodes.node_ylow(inode);
+        yhigh = device_ctx.rr_nodes.node_yhigh(inode);
+        xlow = device_ctx.rr_nodes.node_xlow(inode);
 
         /* Count horizontal (orthogonal to inode) segs first. */
 

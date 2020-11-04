@@ -185,7 +185,6 @@ struct t_rr_indexed_data {
     float T_linear = std::numeric_limits<float>::quiet_NaN();
     float T_quadratic = std::numeric_limits<float>::quiet_NaN();
     float C_load = std::numeric_limits<float>::quiet_NaN();
-    float penalty_cost;
 };
 
 #include "rr_node_impl.h"

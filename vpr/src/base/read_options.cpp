@@ -775,8 +775,6 @@ struct ParseRouterLookahead {
             conv_value.set_value(e_router_lookahead::MAP);
         else if (str == "extended_map")
             conv_value.set_value(e_router_lookahead::EXTENDED_MAP);
-        else if (str == "connection_box_map")
-            conv_value.set_value(e_router_lookahead::CONNECTION_BOX_MAP);
         else {
             std::stringstream msg;
             msg << "Invalid conversion from '"
@@ -790,12 +788,10 @@ struct ParseRouterLookahead {
 
     ConvertedValue<std::string> to_str(e_router_lookahead val) {
         ConvertedValue<std::string> conv_value;
-        if (val == e_router_lookahead::CLASSIC) {
+        if (val == e_router_lookahead::CLASSIC)
             conv_value.set_value("classic");
-        } else if (val == e_router_lookahead::MAP) {
+        else if (val == e_router_lookahead::MAP) {
             conv_value.set_value("map");
-        } else if (val == e_router_lookahead::CONNECTION_BOX_MAP) {
-            conv_value.set_value("connection_box_map");
         } else {
             VTR_ASSERT(val == e_router_lookahead::EXTENDED_MAP);
             conv_value.set_value("extended_map");
@@ -804,7 +800,7 @@ struct ParseRouterLookahead {
     }
 
     std::vector<std::string> default_choices() {
-        return {"classic", "map", "extended_map", "connection_box_map"};
+        return {"classic", "map", "extended_map"};
     }
 };
 
