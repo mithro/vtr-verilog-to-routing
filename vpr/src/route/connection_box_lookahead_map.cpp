@@ -398,13 +398,13 @@ std::pair<util::Cost_Entry, int> ConnectionBoxCostMap::get_nearby_cost_entry(con
 }
 
 // derive a cost from the map between two nodes
-std::pair<float, float> ConnectionBoxMapLookahead::get_expected_delay_and_cong(int inode, int target_node, const t_conn_cost_params& params, float R_upstream) const {
+std::pair<float, float> ConnectionBoxMapLookahead::get_expected_delay_and_cong(RRNodeId from_node, RRNodeId to_node, const t_conn_cost_params& params, float R_upstream) const {
+    auto inode = size_t(from_node);
+    auto target_node = size_t(to_node);
+
     if (inode == target_node) {
         return std::make_pair(0., 0.);
     }
-
-    RRNodeId from_node(inode);
-    RRNodeId to_node(target_node);
 
     auto& device_ctx = g_vpr_ctx.device();
 
@@ -418,7 +418,7 @@ std::pair<float, float> ConnectionBoxMapLookahead::get_expected_delay_and_cong(i
         // Find cheapest cost from from_node_ind to IPINs for this SINK.
         for (int i = 0; i < sink_to_ipin.ipin_count; ++i) {
             float new_cost, new_delay, new_cong;
-            std::tie(new_delay, new_cong) = get_expected_delay_and_cong(inode, sink_to_ipin.ipin_nodes[i], params, R_upstream);
+            std::tie(new_delay, new_cong) = get_expected_delay_and_cong(from_node, RRNodeId(sink_to_ipin.ipin_nodes[i]), params, R_upstream);
 
             new_cost = new_delay + new_cong;
             if (new_cost < cost) {
@@ -789,13 +789,13 @@ void ConnectionBoxMapLookahead::compute(const std::vector<t_segment_inf>& segmen
 
 // get an expected minimum cost for routing from the current node to the target node
 float ConnectionBoxMapLookahead::get_expected_cost(
-    int current_node,
-    int target_node,
+    RRNodeId current_node,
+    RRNodeId target_node,
     const t_conn_cost_params& params,
     float R_upstream) const {
     auto& device_ctx = g_vpr_ctx.device();
 
-    t_rr_type rr_type = device_ctx.rr_nodes[current_node].type();
+    t_rr_type rr_type = device_ctx.rr_nodes.node_type(current_node);
 
     if (rr_type == CHANX || rr_type == CHANY) {
         float delay_cost, cong_cost;

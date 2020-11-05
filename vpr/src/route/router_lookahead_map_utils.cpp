@@ -110,9 +110,8 @@ util::PQ_Entry_Delay::PQ_Entry_Delay(
     const util::PQ_Entry_Delay* parent) {
     this->rr_node = set_rr_node;
 
-    auto& device_ctx = g_vpr_ctx.device();
-
     if (parent != nullptr) {
+        auto& device_ctx = g_vpr_ctx.device();
         float Tsw = device_ctx.rr_switch_inf[switch_ind].Tdel;
         float Rsw = device_ctx.rr_switch_inf[switch_ind].R;
         float Cnode = device_ctx.rr_nodes[size_t(set_rr_node)].C();
@@ -130,8 +129,6 @@ util::PQ_Entry_Delay::PQ_Entry_Delay(
     } else {
         this->delay_cost = 0.f;
     }
-
-    this->delay_cost += device_ctx.rr_switch_inf[switch_ind].penalty_cost;
 }
 
 util::PQ_Entry_Base_Cost::PQ_Entry_Base_Cost(
@@ -140,9 +137,8 @@ util::PQ_Entry_Base_Cost::PQ_Entry_Base_Cost(
     const util::PQ_Entry_Base_Cost* parent) {
     this->rr_node = set_rr_node;
 
-    auto& device_ctx = g_vpr_ctx.device();
-
     if (parent != nullptr) {
+        auto& device_ctx = g_vpr_ctx.device();
         if (device_ctx.rr_switch_inf[switch_ind].configurable()) {
             this->base_cost = parent->base_cost + get_single_rr_cong_base_cost(size_t(set_rr_node));
         } else {
@@ -151,8 +147,6 @@ util::PQ_Entry_Base_Cost::PQ_Entry_Base_Cost(
     } else {
         this->base_cost = 0.f;
     }
-
-    this->base_cost += device_ctx.rr_switch_inf[switch_ind].penalty_cost;
 }
 
 /* returns cost entry with the smallest delay */
@@ -203,6 +197,10 @@ util::Cost_Entry util::Expansion_Cost_Entry::get_geomean_entry() const {
 util::Cost_Entry util::Expansion_Cost_Entry::get_median_entry() const {
     /* find median by binning the delays of all entries and then chosing the bin
      * with the largest number of entries */
+
+    // This is code that needs to be revisited. For the time being, if the median entry
+    // method calculation is used an assertion is thrown.
+    VTR_ASSERT_MSG(false, "Get median entry calculation method is not implemented!");
 
     int num_bins = 10;
 
